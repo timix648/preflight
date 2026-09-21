@@ -1,0 +1,218 @@
+# Agent instructions
+
+Briefing for coding agents in this repository (Claude Code, Cursor, Codex).
+Claude Code loads it through `CLAUDE.md`.
+
+## Project overview
+
+This is **Preflight**: a scaffold-hbar template whose
+users can acquire and hold any Hedera token without ever hitting
+`TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`.
+
+The product is not "association is hard". Hedera shipped three protocol
+changes at that problem and produced **four mechanisms with no guidance on
+which to use when**. This template implements all four behind one API that
+picks correctly for a given situation and explains its choice in a sentence
+the UI renders. That package does not exist anywhere else.
+
+## Which Solidity package
+
+- `packages/hardhat` exists → Hardhat (`hardhat-deploy`). **This repo.**
+- `packages/foundry` does not exist here. Ignore Foundry instructions.
+- `packages/nextjs` is the frontend (App Router, Wagmi, Viem, DaisyUI).
+
+## Commands
+
+Yarn is vendored at `.yarn/releases/`. No global install is needed.
+
+```bash
+# Install. The committed lockfile is in sync, so a plain immutable
+# install (what CI does by default) passes. If you add a dependency,
+# commit the resulting yarn.lock in the SAME commit or CI breaks.
+yarn install
+
+# Quality — all four must pass before any commit
+yarn lint
+yarn test            # vitest, core library
+yarn next:build
+yarn hardhat:test
+
+# Frontend
+yarn next:dev            # http://localhost:3000
+
+# Contracts
+yarn hardhat:compile
+yarn hardhat:deploy --network hederaTestnet
+yarn hardhat:verify:testnet
+
+# Deployer account (key is encrypted at rest — never stored raw)
+yarn hardhat:account:import
+yarn hardhat:account
+```
+
+## Layout
+
+| What | Where | Rule |
+| --- | --- | --- |
+| Contracts | `packages/hardhat/contracts/` | Small. This is not a contracts project. |
+| Deploy scripts | `packages/hardhat/deploy/` | |
+| Contract tests | `packages/hardhat/test/` | Revert paths matter more than coverage %. |
+| **Core library** | `packages/nextjs/lib/onboarding/` | **Framework-free. See below.** |
+| React hooks | `packages/nextjs/hooks/scaffold-hbar/` | Scaffold's own. There are deliberately **no** onboarding-specific hooks — see below. |
+| Routes | `packages/nextjs/app/` | `/`, `/diagnose`, `/acquire`, `/debug`. |
+| Shared types | `packages/nextjs/lib/onboarding/types.ts` | The interface contract. |
+
+## The rules that matter
+
+### 1. `lib/onboarding/` must stay framework-free
+
+Nothing under `lib/onboarding/` may import React, Next.js, wagmi, or any
+hook. This is what lets the core run from a route handler, a script, a test,
+or another framework — and it is what makes this a foundation rather than a
+UI.
+
+**Violating this is the single worst thing you can do to this codebase.**
+
+The core is consumed in exactly two places, and neither is a hook:
+
+- **Server Components** (`app/page.tsx`, `app/diagnose/page.tsx`) call it
+  directly. No client bundle, no wallet, no `.env`.
+- **API route handlers** (`app/api/onboarding/*`) call it server-side for the
+  one client component that needs it, `app/acquire/_components/AcquireFlow.tsx`.
+
+There is no `hooks/onboarding/` directory and none is needed. If you find
+yourself wanting one, ask first whether the work belongs in a Server Component
+or a route handler instead — it usually does, and moving it to the client
+costs the credential-free first journey.
+
+### 2. Hook names — the trap that will bite you
+
+```ts
+// CORRECT — import from ~~/hooks/scaffold-hbar
+useScaffoldReadContract
+useScaffoldWriteContract
+useScaffoldEventHistory
+useScaffoldWatchContractEvent
+useDeployedContractInfo
+useScaffoldContract
+useTransactor
+```
+
+They are `useScaffoldReadContract` and `useScaffoldWriteContract`. They are
+**not** `useScaffoldContractRead` / `useScaffoldContractWrite` — that is older
+Scaffold-ETH naming, and most models emit it from memory because the ETH
+version dominates their training data. Grep before every commit:
+
+```bash
+grep -rn "useScaffoldContractRead\|useScaffoldContractWrite" packages/
+```
+
+### 3. System contract addresses
+
+| Address | Service | Used for |
+| --- | --- | --- |
+| `0x167` | Hedera Token Service (HTS) | Association state, token info |
+| `0x16a` | Hedera Account Service (HAS) | `isAuthorized`, `isAuthorizedRaw` |
+| `0x16b` | Hedera Schedule Service (HSS) | Not used by this template |
+
+`isAuthorized` / `isAuthorizedRaw` are on **HAS at `0x16a`**, not on HTS at
+`0x167`. Getting this wrong produces code that calls the wrong contract.
+
+**Never check `target.code.length` to decide whether a system contract is
+available.** They are precompiles, not deployed bytecode: inside the EVM
+`address(0x167).code.length` is `0` on live Hedera, so an extcodesize guard
+rejects every legitimate call. `eth_getCode` disagrees with the EVM here (1
+byte for `0x167`, empty for `0x16a`), so the bug is invisible from outside the
+contract. Use `block.chainid` instead — 295 mainnet, 296 testnet, 297
+previewnet, 298 local. See NOTES-failures.md #16.
+
+### 4. The SDK is Hiero, not Hashgraph
+
+```ts
+import { TokenAirdropTransaction } from "@hiero-ledger/sdk";  // correct
+import { TokenAirdropTransaction } from "@hashgraph/sdk";     // WRONG
+```
+
+This project uses **`@hiero-ledger/sdk`** (^2.80.0). Hiero is the Linux
+Foundation's renamed Hedera SDK and is what scaffold-hbar ships. Most models
+emit `@hashgraph/sdk` from memory; installing it here adds a second, conflicting
+SDK to the tree. Do not add it.
+
+Verified 18 September 2026 against the installed package — every class all four
+association paths need is present and callable:
+
+`TokenAssociateTransaction`, `AccountUpdateTransaction`,
+`TokenAirdropTransaction`, `TokenClaimAirdropTransaction`,
+`TokenRejectTransaction`, `TokenCancelAirdropTransaction`, `BatchTransaction`,
+`PendingAirdropId`.
+
+No association path needs to be documented as a limitation.
+
+### 5. SaucerSwap addresses — verified, not copied
+
+`lib/onboarding/contracts.ts` holds the testnet deployments. Every address in
+it was checked against the live mirror node, not taken from documentation.
+
+Use the **V1 RouterV3 `0.0.19264`**. It is the most actively used router on
+testnet. Do **not** reach for `QuoterV2 0.0.1390002` for pricing: it resolves,
+the docs list it, and nothing has called it in over three months. Use the V1
+router's `getAmountsOut` instead — that is what `routerQuote()` does.
+
+Two rules that are not negotiable:
+
+- **Quote from the router, never from the price feed.** The published
+  `priceUsd` diverged from the actual pool by 12.6% when measured, and that gap
+  is not price impact (quoting 0.01 vs 100 HBAR moves the rate 0.13%). Feeds are
+  for display and ranking; the router is for execution.
+- **`path[0]` must be the WHBAR TOKEN `0.0.15058`**, not the WHBAR contract
+  `0.0.15057`. Adjacent ids; the wrong one yields `INVALID_PATH`, which names
+  nothing useful.
+
+Transaction `value` is in **weibar** (18dp) and the network divides by 10^10 to
+reach tinybar. Build it with `hbarToWeibar()`. Passing tinybar under-spends by
+ten billion times.
+
+**Association must resolve before the router is called.** SaucerSwap's own docs
+say a swap to an unassociated account fails with
+`TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`. Do not reorder those steps or make the swap
+button reachable before step 1 completes.
+
+### 6. Hedera-specific failure modes
+
+Every one of these must render as a human sentence plus a fix, never as a raw
+RPC string. Route them through `lib/onboarding/status.ts`.
+
+- `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT` — no association and no free auto-slots.
+- ED25519 key used for an EVM deploy — ED25519 has no EVM alias.
+- `ecrecover` returns the wrong address — the address is long-zero form.
+- `INSUFFICIENT_GAS` / `CONTRACT_REVERT_EXECUTED` — precompiles cost more
+  than they look.
+- `INSUFFICIENT_PAYER_BALANCE` — fund at the faucet.
+- Balance looks stale after a transfer — mirror-node fungible balances come
+  from a periodic file. Show the source.
+
+### 7. Styling
+
+Use DaisyUI component classes and the `@scaffold-hbar-ui` components
+(`Address`, `AddressInput`, `Balance`, `EtherInput`, `IntegerInput`). Do not
+rebuild them and do not hand-roll raw Tailwind where DaisyUI has a component.
+
+## Non-goals
+
+Do **not**:
+
+- switch package manager (Yarn only — it is what `template.json` declares),
+- remove scaffold conventions or the `/debug` page,
+- commit a `.env`, or any real key,
+- ship a `.mcp.json` (the harness pins its own `@playwright/mcp` via npx),
+- rebuild what official templates already provide,
+- build a wallet, custody, key storage, or account creation,
+- add a gasless/paymaster path — Hashio has `PAYMASTER_ENABLED: "false"`,
+- add a token creation UI — acquiring and holding is the scope,
+- and **never `git push`, create a remote, open a pull request, merge, tag a
+  release, or change repository visibility. Publication is a human decision.**
+
+That last item is not a style preference. Local commits, branches and rebases
+are always fine — commit constantly. Publication is irreversible and belongs
+to the project owner alone. If you believe a task requires pushing, stop and
+say so instead.

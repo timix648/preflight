@@ -3,6 +3,7 @@ import { DiagnoseForm } from "./_components/DiagnoseForm";
 import type { NextPage } from "next";
 import { CopyableValue } from "~~/components/onboarding/CopyableValue";
 import { SourceBadge } from "~~/components/onboarding/SourceBadge";
+import { StrategyCandidates } from "~~/components/onboarding/StrategyCandidates";
 import {
   OnboardingError,
   describeKeySituation,
@@ -93,7 +94,9 @@ const Diagnosis = async ({ account }: { account: string }) => {
   // Modelled the other way it recommended a batch — "the recipient can sign
   // and pay" — for an account this same page reports cannot sign EVM
   // transactions at all.
-  const selection = selectStrategy({
+  // ONE context object, shared by the recommendation and the four-candidate
+  // panel below it. Building it twice is how the two would drift apart.
+  const strategyContext = {
     alreadyAssociated: false,
     freeAutoSlots: slots,
     recipientCanSign: false,
@@ -101,7 +104,9 @@ const Diagnosis = async ({ account }: { account: string }) => {
     senderControlsRecipient: false,
     preferSingleApproval: true,
     batchSupported: true,
-  });
+  };
+
+  const selection = selectStrategy(strategyContext);
 
   const strategy = selection.strategy === "none" ? null : describeStrategy(selection.strategy);
 
@@ -208,12 +213,12 @@ const Diagnosis = async ({ account }: { account: string }) => {
                 <div className="font-mono">{selection.recipientApprovals}</div>
               </div>
             </div>
-            {selection.alternatives.length > 0 && (
-              <p className="text-sm opacity-80 mt-2">Would also have worked: {selection.alternatives.join(", ")}.</p>
-            )}
           </div>
         </div>
       ) : null}
+
+      {/* ---------------- all four candidates, with the rejected ones explained ---------------- */}
+      {strategy ? <StrategyCandidates context={strategyContext} /> : null}
     </div>
   );
 };

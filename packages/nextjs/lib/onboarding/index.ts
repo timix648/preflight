@@ -37,6 +37,8 @@ export { OnboardingError } from "./types";
 
 // Trap 2 — addresses.
 export { classifyAddress, isLongZero, toAccountId, toEvmAddress } from "./address";
+export type { StrategyEvaluation, StrategyVerdict } from "./association";
+export { evaluateStrategies } from "./association";
 
 // Trap 5 — decimals.
 export type { Tinybar, TokenUnits, Weibar } from "./units";

@@ -172,6 +172,106 @@ export function selectStrategy(context: StrategyContext): StrategySelection {
   };
 }
 
+/** How a candidate fared against a given situation. */
+export type StrategyVerdict = "chosen" | "viable" | "unavailable";
+
+/** One of the four mechanisms, judged against a situation. */
+export interface StrategyEvaluation {
+  strategy: AssociationStrategy;
+  verdict: StrategyVerdict;
+  /** Which HIP introduced it, where one did. */
+  hip: string | null;
+  /** Why this verdict, in a sentence a person can read. */
+  reason: string;
+  paidBy: "recipient" | "sender";
+  recipientApprovals: number;
+}
+
+/** Fixed facts about each mechanism, independent of any situation. */
+const STRATEGY_FACTS: Record<AssociationStrategy, { hip: string | null; paidBy: "recipient" | "sender" }> = {
+  explicit: { hip: null, paidBy: "recipient" },
+  "auto-slot": { hip: "HIP-23", paidBy: "recipient" },
+  airdrop: { hip: "HIP-904", paidBy: "sender" },
+  batch: { hip: "HIP-551", paidBy: "recipient" },
+};
+
+/**
+ * Judge all four mechanisms against one situation, not just the winner.
+ *
+ * `selectStrategy` answers "what will the kit do". This answers "and what
+ * about the other three" — which is the question a developer actually has
+ * when they are deciding whether to trust the kit's choice.
+ *
+ * Rejected candidates keep a full explanation rather than being hidden or
+ * greyed out. A diagnostic tool that dims the reasoning has thrown away the
+ * thing it exists to show.
+ *
+ * Pure. Derives its verdicts from the same `StrategyContext` that drives
+ * `selectStrategy`, so the two cannot disagree — a test asserts that.
+ */
+export function evaluateStrategies(context: StrategyContext): StrategyEvaluation[] {
+  const chosen = selectStrategy(context).strategy;
+  const canPay = context.recipientCanSign && context.recipientHasHbarForFees;
+  const hasFreeSlot = context.freeAutoSlots === UNLIMITED_AUTO_SLOTS || context.freeAutoSlots > 0;
+  const canRaiseSlots = context.senderControlsRecipient && context.recipientCanSign;
+
+  const build = (
+    strategy: AssociationStrategy,
+    available: boolean,
+    approvals: number,
+    available_reason: string,
+    blocked_reason: string,
+  ): StrategyEvaluation => ({
+    strategy,
+    verdict: strategy === chosen ? "chosen" : available ? "viable" : "unavailable",
+    hip: STRATEGY_FACTS[strategy].hip,
+    paidBy: STRATEGY_FACTS[strategy].paidBy,
+    recipientApprovals: approvals,
+    reason: available ? available_reason : blocked_reason,
+  });
+
+  return [
+    build(
+      "auto-slot",
+      hasFreeSlot || canRaiseSlots,
+      hasFreeSlot ? 0 : 1,
+      hasFreeSlot
+        ? context.freeAutoSlots === UNLIMITED_AUTO_SLOTS
+          ? "The recipient accepts unlimited automatic associations, so the transfer associates on arrival."
+          : `The recipient has ${context.freeAutoSlots} free slot${context.freeAutoSlots === 1 ? "" : "s"}, consumed on arrival.`
+        : "No free slots, but the sender controls this account and can raise the limit once.",
+      "The recipient has no free automatic slots and the sender cannot raise the limit on an account it does not control.",
+    ),
+    build(
+      "batch",
+      canPay && context.batchSupported,
+      1,
+      "The recipient can sign and pay, so associate and transfer fit in one atomic transaction — one approval, and no window where the token is associated but undelivered.",
+      !context.batchSupported
+        ? "Batching is unavailable: the installed SDK or the target network does not support HIP-551."
+        : !context.recipientCanSign
+          ? "Batching needs a signature from the recipient, and this account cannot be asked to sign."
+          : "Batching needs the recipient to pay its own fees, and this account holds no HBAR.",
+    ),
+    build(
+      "explicit",
+      canPay,
+      2,
+      "The recipient can sign and holds HBAR, so it can associate first and then receive. Two approvals — the most widely understood path.",
+      !context.recipientCanSign
+        ? "An explicit association must be signed by the recipient, and this account cannot be asked to sign."
+        : "An explicit association is paid by the recipient, and this account holds no HBAR for fees.",
+    ),
+    build(
+      "airdrop",
+      true, // always works: it asks nothing of the recipient
+      0,
+      "Always available. The sender pays and the token sits pending until the recipient claims it — so it works even for an account that cannot sign and holds no HBAR.",
+      "",
+    ),
+  ];
+}
+
 /** Which other strategies would also have worked, for the /diagnose route. */
 function buildAlternatives(context: StrategyContext, chosen: AssociationStrategy): AssociationStrategy[] {
   const viable: AssociationStrategy[] = [];

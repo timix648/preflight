@@ -1,0 +1,50 @@
+schemaVersion: 2
+
+name: preflight
+description: >
+  A scaffold-hbar template whose users can acquire and hold any Hedera token
+  without ever hitting TOKEN_NOT_ASSOCIATED_TO_ACCOUNT. Implements all four
+  association mechanisms (explicit, HIP-23 auto-slot, HIP-904 airdrop,
+  HIP-551 batch) behind one API that picks correctly and explains its choice.
+  Anchored on SaucerSwap for a real token acquisition on testnet.
+
+baseline:
+  commands:
+    # Required — used for install fingerprinting.
+    # Plain `yarn install`, no --no-immutable: the regenerated lockfile is
+    # committed, so an immutable install (what CI does by default) passes.
+    # Verified 18 Sep 2026. See NOTES-failures.md #6.
+    - name: install
+      command: yarn install
+    - name: build
+      command: yarn next:build
+
+agent: claude
+
+prd:
+  - .harness/prds/01-core.md
+
+validators:
+  static: .harness/validators/static.json
+  # Tier 2 — boots the app and walks every route named in the README.
+  # Checks status, hydration and browser console errors per route.
+  playwright: .harness/validators/playwright-smoke.yaml
+
+# Tier 3.5 — a funded ephemeral testnet account, verified against the mirror
+# node. Commented out rather than deleted because it is the next tier to turn
+# on, and the shape is easy to get wrong from memory.
+#
+# The loader REJECTS network: mainnet, and these env vars are read from the
+# SHELL, never from .env — the harness does not load dotenv for them.
+#
+#   export HEDERA_OPERATOR_ID=0.0.xxxx     # ECDSA
+#   export HEDERA_OPERATOR_KEY=0x...
+#
+# chainValidation:
+#   enabled: true
+#   network: testnet
+#   operator:
+#     accountIdEnv: HEDERA_OPERATOR_ID
+#     privateKeyEnv: HEDERA_OPERATOR_KEY
+#   fundingHbar: 10
+#   sweepBack: true

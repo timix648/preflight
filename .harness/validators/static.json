@@ -1,0 +1,45 @@
+{
+  "name": "gate-static",
+  "description": "Eligibility gate items G2, G3, G4, G8 and G9 as machine checks.",
+  "fileAssertions": {
+    "required": [
+      "README.md",
+      "AGENTS.md",
+      "template.json",
+      "LICENSE",
+      "package.json",
+      "packages/nextjs/package.json",
+      ".harness/spec.yaml"
+    ],
+    "forbidden": [
+      ".env",
+      "packages/nextjs/.env",
+      "packages/hardhat/.env",
+      ".mcp.json"
+    ]
+  },
+  "textAssertions": [
+    {
+      "file": "README.md",
+      "contains": [
+        "yarn install",
+        "npm create scaffold-hbar",
+        "hashscan.io"
+      ]
+    },
+    {
+      "file": "AGENTS.md",
+      "contains": [
+        "useScaffoldReadContract"
+      ]
+    }
+  ],
+  "secretScan": {
+    "patterns": [
+      {
+        "name": "private-key-assignment",
+        "pattern": "(PRIVATE_KEY|OPERATOR_KEY|MNEMONIC|SECRET)\\s*[:=]\\s*[\"']?(0x)?(?!0{32})[0-9a-fA-F]{32,}"
+      }
+    ]
+  }
+}

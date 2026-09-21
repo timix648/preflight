@@ -1,65 +1,86 @@
-# Handover
+# Handover — Preflight
 
-Everything needed to run the frontend, read the code and make changes. Source
-only — no `node_modules`, no build output, no credentials.
+Everything needed to run this, read it, and finish it. Source only: no
+`node_modules`, no build output, no credentials.
+
+Updated 20 September 2026.
 
 ## Run it
 
 ```bash
-# Yarn is vendored in .yarn/releases, so no global install is needed.
+# Yarn 3 is vendored in .yarn/releases, so no global install is needed.
 node .yarn/releases/yarn-3.2.3.cjs install
 node .yarn/releases/yarn-3.2.3.cjs next:dev
 ```
 
-Open <http://localhost:3000>.
-
-If `yarn` is already on your PATH at v3+, plain `yarn install` and
-`yarn next:dev` work too. On Windows, `corepack enable` needs Administrator
-rights — the vendored binary above avoids that entirely.
+Open <http://localhost:3000>. First compile takes a few minutes; after that it
+is fast.
 
 **You need nothing else for the frontend.** No wallet, no key, no `.env`. The
 home page and `/diagnose` are Server Components reading live Hedera testnet
 data, and the router quote on `/acquire` is a plain `eth_call`. Only *signing*
 needs a wallet.
 
-## What you are looking at
+If `yarn` is already on your PATH at v3+, plain `yarn install` works too. On
+Windows `corepack enable` needs Administrator rights — the vendored binary
+above avoids that.
 
-| Route | Needs a wallet? | What it does |
+## What this is
+
+**Preflight** — *"Run preflight before the transfer."* A scaffold-hbar external
+template. Users acquire and hold any Hedera token without ever hitting
+`TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`.
+
+The product is **not** "association is hard". Hedera shipped three protocol
+changes at that problem and produced **four mechanisms with no guidance on
+which to use when**. This template implements all four behind one API that
+picks correctly and explains its choice in a sentence the UI renders.
+
+| Route | Wallet? | What it does |
 | --- | --- | --- |
-| `/` | no | Live relay limits, SaucerSwap stats, a decimals histogram of all 587 listed tokens, and the architecture diagram |
-| `/diagnose` | no | Paste any account — try `0.0.2`, then `0.0.10608004`. Address form, ECRECOVER safety, key type, association slots, and which of four mechanisms the kit would choose |
-| `/acquire` | only to sign | Token picker, a real router quote, then associate → swap |
+| `/` | no | Relay limits from the undocumented `/config`, SaucerSwap stats, a decimals histogram over 587 tokens, the architecture, and **the three-beat proof** |
+| `/diagnose` | no | Paste an account — try `0.0.2`, then `0.0.10608004`. Address form, ECRECOVER safety, key type, slots, and **all four mechanisms judged against that account** |
+| `/acquire` | to sign | Token picker, real router quote, then associate → swap |
 | `/debug` | yes | Ships with scaffold-hbar; kept deliberately |
 
 ## Where the code lives
 
 ```
-packages/nextjs/lib/onboarding/   the core. NOTHING here imports React.
-packages/nextjs/app/              routes
+packages/nextjs/lib/onboarding/    the core. NOTHING here imports React.
+packages/nextjs/app/               routes
 packages/nextjs/components/onboarding/
-packages/hardhat/contracts/       AssociationProbe.sol
-.harness/                         validator recipes
+packages/hardhat/contracts/        AssociationProbe.sol
+.harness/                          validator recipes
 ```
 
-Start with `lib/onboarding/association.ts`. `selectStrategy()` is the product:
-a pure function that picks one of four association mechanisms and returns a
-sentence explaining the choice, which the UI renders verbatim.
+Start with `lib/onboarding/association.ts`. Two functions matter:
+
+- **`selectStrategy()`** — pure. Picks one of four mechanisms and returns a
+  sentence explaining the choice, which the UI renders verbatim.
+- **`evaluateStrategies()`** — pure. Judges *all four* against a situation for
+  `/diagnose`, including the ones that do not apply and why.
+
+They share one `StrategyContext` and are cross-checked by tests, so the
+recommendation and the four-candidate panel cannot drift apart.
 
 ## Before you change anything
 
 Read `AGENTS.md`. It is short and it is the briefing — hook names, the
-framework-free rule, the system-contract addresses, and the non-goals. The
-traps it lists are ones that were actually hit, not hypotheticals.
+framework-free rule, system contract addresses, SDK choice, the SaucerSwap
+gotchas, and the non-goals. Every trap it lists was actually hit.
 
 `NOTES-failures.md` is 21 real failures with causes and fixes. If something
-behaves strangely, check there first; there is a good chance it is already
-written up.
+behaves strangely, check there first.
 
-## Checks
+**Note the non-goals, particularly the last one: never `git push`, create a
+remote, open a PR, or change repository visibility. Publication is the project
+owner's decision alone.**
+
+## Checks — all four must pass
 
 ```bash
 node .yarn/releases/yarn-3.2.3.cjs lint
-node .yarn/releases/yarn-3.2.3.cjs next:test        # 56 unit tests, offline
+node .yarn/releases/yarn-3.2.3.cjs next:test        # 113 unit tests, offline
 node .yarn/releases/yarn-3.2.3.cjs hardhat:test:ci  # 17 contract tests
 node .yarn/releases/yarn-3.2.3.cjs next:build
 ```
@@ -71,6 +92,37 @@ because testnet was slow:
 node .yarn/releases/yarn-3.2.3.cjs workspace @sh/nextjs test:live
 ```
 
+All four passed as of 20 September 2026.
+
+## State of play
+
+### Done
+
+- Core library, all eight traps, framework-free, 113 tests
+- All four association mechanisms, each proven on-chain
+- `AssociationProbe.sol` deployed and Sourcify-verified, 17 tests
+- 18 verifiable testnet transactions in `EVIDENCE.md`, including the failures
+- Three-beat proof panel on `/` — elapsed time derived from consensus
+  timestamps at render, never hard-coded
+- Four-candidate panel on `/diagnose`
+- Signal theme (single-file DaisyUI replacement, fonts embedded as WOFF2)
+- README, `AGENTS.md`, `NOTES-failures.md`
+- Harness recipe, Tiers 0–2
+- Git initialised, 9 commits, **no remote**
+
+### Outstanding, and who can do it
+
+| # | Item | Blocked on |
+| --- | --- | --- |
+| 1 | **README create command** says `<org>/preflight`. The GitHub repo must be created with **exactly** that name or gate item G1 fails. | the org name |
+| 2 | **Logo** — `preflight-mark.svg` and `-dark.svg` are placeholders (concept 03). The approved flowing check-arrow needs exporting from the design tool. | design export |
+| 3 | **Demo video** — not started. Highest-value remaining item: a panel watches 90 seconds before reading 3,000 words, and the fail → associate → succeed sequence is already captured. | anyone |
+| 4 | **`/acquire` end-to-end evidence** — a real swap signed in a browser with a funded wallet. `EVIDENCE.md` lists it as outstanding. | a funded wallet |
+| 5 | **Harness Tier 3.5** — `chainValidation` is written but commented out in `.harness/spec.yaml`. Needs `HEDERA_OPERATOR_ID` and `HEDERA_OPERATOR_KEY` **exported in the shell**, not in `.env`. ECDSA only. | operator credentials |
+| 6 | **Debug Contracts** and the wallet modal have had no visual pass under the new theme. | anyone |
+| 7 | **Clean-machine scaffold test** — the real G1 check. Impossible until the repo is public. | the public repo |
+| 8 | Hedera's official **self-check script** for the gate was promised for the week before the build window. Watch for it and run it before submitting. | Hedera |
+
 ## If you want to deploy or sign
 
 You need your own **ECDSA** account from <https://portal.hedera.com> — not
@@ -81,12 +133,12 @@ the faucet, then:
 node .yarn/releases/yarn-3.2.3.cjs hardhat:account:import
 ```
 
-That prompts for the key and a password, and stores it **encrypted** in
-`packages/hardhat/.env`, which is gitignored. No key is included in this
-archive and none should ever be committed.
+That prompts for the key and a password and stores it **encrypted** in
+`packages/hardhat/.env`, which is gitignored. No key is in this archive and
+none should ever be committed.
 
 The contracts are already deployed and source-verified on testnet, so you only
-need this if you want to deploy your own:
+need this to deploy your own:
 
 - working: [`0.0.10620620`](https://hashscan.io/testnet/contract/0.0.10620620)
 - the broken predecessor, kept on purpose:
@@ -98,7 +150,9 @@ that pair is the most interesting thing in the repository.
 ## What was left out of this archive
 
 `node_modules`, `.next`, `.yarn/cache`, Hardhat `artifacts`/`cache`,
-`typechain-types` — all regenerated by `install` and `build`. Also `.env` and
-`.mcp.json`, which are gitignored and local to each machine.
+`typechain-types` — all regenerated by `install` and `build`. Also `.env`,
+which is gitignored and local to each machine.
 
-Git history is not included either. This is a snapshot of the working tree.
+**Git history IS included** (`.git`, 9 commits, no remote configured). Keep it:
+it is the record of how this was built, and the repository has never been
+pushed anywhere.

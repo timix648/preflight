@@ -187,7 +187,7 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
   return (
     <div className="flex flex-col gap-5">
       {/* ------------------------- inputs ------------------------- */}
-      <div className="grid sm:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-[1.6fr_1fr_1fr] gap-3">
         <div className="form-control sm:col-span-2">
           <label className="label" htmlFor="token">
             <span className="label-text font-medium">Token</span>

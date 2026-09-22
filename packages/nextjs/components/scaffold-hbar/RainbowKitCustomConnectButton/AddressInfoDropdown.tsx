@@ -71,7 +71,7 @@ export const AddressInfoDropdown = ({
               {isAddressCopiedToClipboard ? (
                 <>
                   <CheckCircleIcon className="text-xl font-normal h-6 w-4 ml-2 sm:ml-0" aria-hidden="true" />
-                  <span className="whitespace-nowrap">Copied!</span>
+                  <span className="whitespace-nowrap">Copied</span>
                 </>
               ) : (
                 <>

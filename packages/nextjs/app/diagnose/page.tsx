@@ -199,7 +199,9 @@ const Diagnosis = async ({ account }: { account: string }) => {
               and cannot ask to sign. If it were your own wallet, the kit would have more options; that case is on{" "}
               <code>/acquire</code>.
             </p>
-            <div className="grid sm:grid-cols-3 gap-3 mt-2 text-sm">
+            {/* Asymmetric on purpose: the mechanism is the answer, the other two
+                are qualifiers. Three equal columns would weight them the same. */}
+            <div className="grid sm:grid-cols-[1.6fr_1fr_1fr] gap-3 mt-2 text-sm">
               <div>
                 <div className="opacity-70">Mechanism</div>
                 <div className="font-mono">{strategy.mechanism}</div>

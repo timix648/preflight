@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { NextPage } from "next";
 import { ArchitectureDiagram } from "~~/components/onboarding/ArchitectureDiagram";
+import { CountUp } from "~~/components/onboarding/CountUp";
 import { ProofOfAssociation } from "~~/components/onboarding/ProofOfAssociation";
 import { SourceBadge } from "~~/components/onboarding/SourceBadge";
 import { describeLimits, relayLimits } from "~~/lib/onboarding";
@@ -127,16 +128,22 @@ const Home: NextPage = async () => {
             <div className="stats stats-vertical sm:stats-horizontal shadow w-full sd-stagger">
               <div className="stat">
                 <div className="stat-title">Swaps, all time</div>
-                <div className="stat-value text-2xl">{stats.swapTotal.toLocaleString()}</div>
+                <div className="stat-value text-2xl">
+                  <CountUp value={stats.swapTotal}>{stats.swapTotal.toLocaleString()}</CountUp>
+                </div>
                 <div className="stat-desc">on testnet</div>
               </div>
               <div className="stat">
                 <div className="stat-title">Total value locked</div>
-                <div className="stat-value text-2xl">${Math.round(stats.tvlUsd).toLocaleString()}</div>
+                <div className="stat-value text-2xl">
+                  $<CountUp value={Math.round(stats.tvlUsd)}>{Math.round(stats.tvlUsd).toLocaleString()}</CountUp>
+                </div>
               </div>
               <div className="stat">
                 <div className="stat-title">Tokens listed</div>
-                <div className="stat-value text-2xl">{tokens.length.toLocaleString()}</div>
+                <div className="stat-value text-2xl">
+                  <CountUp value={tokens.length}>{tokens.length.toLocaleString()}</CountUp>
+                </div>
                 <div className="stat-desc">any of which your users may hold</div>
               </div>
             </div>
@@ -163,15 +170,19 @@ const Home: NextPage = async () => {
             <div className="card bg-base-100 shadow">
               <div className="card-body gap-2 py-5 sd-stagger">
                 {histogram.map(entry => (
-                  <div key={entry.decimals} className="flex items-center gap-3 text-sm">
+                  <div key={entry.decimals} className="bar-row flex items-center gap-3 text-sm py-1.5">
                     <span className="font-mono w-14 shrink-0 text-right opacity-70">{entry.decimals} dp</span>
-                    <div className="grow bg-base-300 rounded h-4 overflow-hidden" aria-hidden>
+                    {/* No background track — see the note in globals.css. The bar
+                        sits on the page and the row rule carries the baseline. */}
+                    <div className="grow h-3" aria-hidden>
                       <div
-                        className="bg-primary h-full rounded"
-                        style={{ width: `${Math.max(2, (entry.count / maxCount) * 100)}%` }}
+                        className="bar-grow bg-primary h-full rounded-xs"
+                        style={{ width: `${Math.max(1.5, (entry.count / maxCount) * 100)}%` }}
                       />
                     </div>
-                    <span className="font-mono w-16 shrink-0 opacity-70">{entry.count}</span>
+                    <span className="font-mono w-16 shrink-0 opacity-70 tabular-nums">
+                      <CountUp value={entry.count}>{entry.count}</CountUp>
+                    </span>
                   </div>
                 ))}
                 <p className="text-xs opacity-60 mt-2">

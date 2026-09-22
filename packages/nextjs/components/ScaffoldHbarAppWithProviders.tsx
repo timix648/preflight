@@ -18,9 +18,17 @@ const ScaffoldHbarApp = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       <div className="flex flex-col min-h-screen">
+        {/* First focusable element on every page. A keyboard user would
+            otherwise tab through the whole nav and the wallet button before
+            reaching content. Visually hidden until focused. */}
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
         <Header />
         <LocalChainErrorBanner />
-        <main className="relative flex flex-col flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="relative flex flex-col flex-1">
+          {children}
+        </main>
         <Footer />
       </div>
       <Toaster />

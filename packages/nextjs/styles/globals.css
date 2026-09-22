@@ -815,3 +815,158 @@ main .card-body [title^="Trap"] .truncate {
     background: CanvasText;
   }
 }
+
+/* ===========================================================================
+   PAPER — additive layer over the Signal theme.
+   ---------------------------------------------------------------------------
+   Everything below this line is additive and self-contained. Delete from this
+   comment to the end of the file to revert exactly to the Signal theme.
+
+   Three problems it addresses:
+     1. #f5f6f8 is the default SaaS grey. Warm cream reads as paper, and paper
+        reads as an instrument printout rather than a dashboard.
+     2. The page was entirely static on scroll.
+     3. Display type was too small and too loosely tracked to carry a page.
+
+   Scroll animation uses `animation-timeline: view()` — CSS scroll-driven
+   animation, NO JavaScript. That matters here: / and /diagnose are Server
+   Components, and a scroll library would force them client-side and cost the
+   credential-free first journey. Wrapped in @supports so browsers without it
+   simply render the content, unanimated and complete.
+   =========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
+
+/* ---- warm the base -------------------------------------------------------- */
+[data-theme="light"] {
+  --color-base-100: #fffdf9; /* card surface, barely warm */
+  --color-base-200: #f7f2ea; /* page — cream, not grey */
+  --color-base-300: #e4dbcc; /* rules */
+}
+[data-theme="dark"] {
+  --color-base-100: #191714; /* warm black, not blue-black */
+  --color-base-200: #100e0c;
+  --color-base-300: #2e2a25;
+}
+
+/* ---- grain ---------------------------------------------------------------- */
+/* An SVG turbulence tile at very low opacity. Fixed, so it does not travel
+   with scroll and does not read as a pattern. No image request. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] body::before {
+  opacity: 0.055;
+}
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- display type --------------------------------------------------------- */
+main h1 {
+  font-size: clamp(2.4rem, 6.2vw, 4.4rem);
+  line-height: 0.94;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+}
+main h2 {
+  letter-spacing: -0.02em;
+}
+
+/* A serif italic dropped into a sans headline. One word, for emphasis.
+   Usage: <span class="accentuate">why</span> */
+.accentuate {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Mono eyebrow above a section. Usage: <p class="eyebrow">…</p> */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  opacity: 0.6;
+  margin: 0 0 0.5rem;
+}
+
+/* ===========================================================================
+   SCROLL-DRIVEN ANIMATION — no JavaScript.
+   Each class animates once as the element enters the viewport.
+   =========================================================================== */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes sd-rise {
+      from { opacity: 0; transform: translateY(2.2rem); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes sd-left {
+      from { opacity: 0; transform: translateX(-3.5rem); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes sd-right {
+      from { opacity: 0; transform: translateX(3.5rem); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes sd-zoom-in {
+      from { opacity: 0; transform: scale(0.86); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes sd-zoom-out {
+      from { opacity: 0; transform: scale(1.14); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes sd-wipe {
+      from { opacity: 0; clip-path: inset(0 100% 0 0); }
+      to   { opacity: 1; clip-path: inset(0 0 0 0); }
+    }
+
+    .sd-rise,
+    .sd-left,
+    .sd-right,
+    .sd-zoom-in,
+    .sd-zoom-out,
+    .sd-wipe {
+      animation-timeline: view();
+      /* Start as the element's top passes 92% down the viewport, finish by
+         58%. Finishing well before centre is deliberate: an element still
+         animating when the reader reaches it feels sluggish. */
+      animation-range: entry 8% cover 42%;
+      animation-fill-mode: both;
+      animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      animation-duration: 1ms; /* driven by scroll, not by the clock */
+    }
+    .sd-rise     { animation-name: sd-rise; }
+    .sd-left     { animation-name: sd-left; }
+    .sd-right    { animation-name: sd-right; }
+    .sd-zoom-in  { animation-name: sd-zoom-in; }
+    .sd-zoom-out { animation-name: sd-zoom-out; }
+    .sd-wipe     { animation-name: sd-wipe; }
+
+    /* Stagger children of a list or grid. */
+    .sd-stagger > * {
+      animation-timeline: view();
+      animation-range: entry 4% cover 38%;
+      animation-name: sd-rise;
+      animation-fill-mode: both;
+      animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      animation-duration: 1ms;
+    }
+    .sd-stagger > *:nth-child(2) { animation-range: entry 8% cover 42%; }
+    .sd-stagger > *:nth-child(3) { animation-range: entry 12% cover 46%; }
+    .sd-stagger > *:nth-child(4) { animation-range: entry 16% cover 50%; }
+    .sd-stagger > *:nth-child(n + 5) { animation-range: entry 20% cover 54%; }
+  }
+}
+
+/* Reduced motion, or no scroll-timeline support: everything is simply
+   present. No class above has any effect, and nothing is hidden. */

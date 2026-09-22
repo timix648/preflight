@@ -35,8 +35,10 @@ const Home: NextPage = async () => {
       {/* ---------------------------------------------------------------- */}
       <section className="hedera-gradient dark:bg-none dark:bg-hedera-charcoal w-full px-5 py-12">
         <div className="max-w-5xl mx-auto">
-          <span className="badge badge-warning badge-sm mb-3">Hedera testnet</span>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">Preflight</h1>
+          <p className="eyebrow text-white/70">Hedera testnet · run preflight before the transfer</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+            Preflight<span className="accentuate text-white/80">.</span>
+          </h1>
           <p className="text-white/90 max-w-3xl text-lg leading-relaxed">
             Your users acquire and hold any Hedera token without ever hitting{" "}
             <code className="px-1 rounded bg-black/25 text-white">TOKEN_NOT_ASSOCIATED_TO_ACCOUNT</code>. Tokens are
@@ -63,12 +65,14 @@ const Home: NextPage = async () => {
         {/* Static, verified transactions — no network call, so it cannot   */}
         {/* fail to render and cannot be slowed by a cold endpoint.         */}
         {/* -------------------------------------------------------------- */}
-        <ProofOfAssociation />
+        <div className="sd-zoom-in">
+          <ProofOfAssociation />
+        </div>
 
         {/* -------------------------------------------------------------- */}
         {/* Relay limits — trap #8                                          */}
         {/* -------------------------------------------------------------- */}
-        <section>
+        <section className="sd-left">
           <div className="flex items-baseline justify-between flex-wrap gap-2 mb-1">
             <h2 className="text-xl font-bold">What this relay will actually let you do</h2>
             {limits && <SourceBadge source="json-rpc" label={limits.version} />}
@@ -112,7 +116,7 @@ const Home: NextPage = async () => {
         {/* -------------------------------------------------------------- */}
         {/* The ecosystem anchor                                            */}
         {/* -------------------------------------------------------------- */}
-        <section>
+        <section className="sd-right">
           <h2 className="text-xl font-bold mb-1">SaucerSwap, right now</h2>
           <p className="text-sm opacity-70 mb-4">
             The DEX this template acquires tokens on. Remove it and there is no token to acquire and no journey — the
@@ -120,7 +124,7 @@ const Home: NextPage = async () => {
           </p>
 
           {stats ? (
-            <div className="stats stats-vertical sm:stats-horizontal shadow w-full">
+            <div className="stats stats-vertical sm:stats-horizontal shadow w-full sd-stagger">
               <div className="stat">
                 <div className="stat-title">Swaps, all time</div>
                 <div className="stat-value text-2xl">{stats.swapTotal.toLocaleString()}</div>
@@ -150,14 +154,14 @@ const Home: NextPage = async () => {
         {/* The decimals argument, made from live data — trap #5            */}
         {/* -------------------------------------------------------------- */}
         {histogram.length > 0 && (
-          <section>
+          <section className="sd-zoom-out">
             <h2 className="text-xl font-bold mb-1">Why this kit never assumes decimals</h2>
             <p className="text-sm opacity-70 mb-4">
               Every token on this DEX, grouped by how many decimal places it uses. Code that assumes 8 — or 18 — is
               wrong about a large share of them, and wrong <em>silently</em>: the amount still looks plausible.
             </p>
             <div className="card bg-base-100 shadow">
-              <div className="card-body gap-2 py-5">
+              <div className="card-body gap-2 py-5 sd-stagger">
                 {histogram.map(entry => (
                   <div key={entry.decimals} className="flex items-center gap-3 text-sm">
                     <span className="font-mono w-14 shrink-0 text-right opacity-70">{entry.decimals} dp</span>
@@ -183,7 +187,7 @@ const Home: NextPage = async () => {
         {/* -------------------------------------------------------------- */}
         {/* How it is built — for the reader who will not read the README   */}
         {/* -------------------------------------------------------------- */}
-        <section>
+        <section className="sd-wipe">
           <h2 className="text-xl font-bold mb-1">How this is put together</h2>
           <p className="text-sm opacity-70 mb-4">
             The whole design on one screen. Everything of value sits in a framework-free core that never imports React,
@@ -195,7 +199,7 @@ const Home: NextPage = async () => {
         {/* -------------------------------------------------------------- */}
         {/* Next step                                                       */}
         {/* -------------------------------------------------------------- */}
-        <section className="card bg-base-200">
+        <section className="card bg-base-200 sd-zoom-in">
           <div className="card-body">
             <h2 className="card-title text-lg">See every trap on one screen</h2>
             <p className="text-sm opacity-80">

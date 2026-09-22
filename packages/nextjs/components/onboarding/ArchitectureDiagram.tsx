@@ -35,7 +35,7 @@ export const ArchitectureDiagram = () => (
           <div className="text-xs uppercase tracking-wider opacity-50 mb-2">Read from</div>
           <div className="flex flex-col gap-1.5">
             {SOURCES.map(source => (
-              <div key={source.name} className="rounded border border-base-300 px-3 py-2">
+              <div key={source.name} className="border-l-2 border-base-300 pl-3 py-1">
                 <div className="text-sm font-medium">{source.name}</div>
                 <div className="text-xs opacity-60">{source.detail}</div>
               </div>
@@ -51,7 +51,10 @@ export const ArchitectureDiagram = () => (
 
         <div className="flex-[1.4]">
           <div className="text-xs uppercase tracking-wider opacity-50 mb-2">lib/onboarding — framework-free</div>
-          <div className="rounded border-2 border-primary/40 bg-primary/5 px-3 py-2.5">
+          {/* The one emphasised element. A thick left rule rather than a full
+              border, so the whole diagram speaks one language: rules mark
+              importance, boxes would promise interaction. */}
+          <div className="border-l-4 border-primary bg-primary/5 pl-3 pr-3 py-2.5">
             <div className="text-sm font-medium mb-1">selectStrategy()</div>
             <div className="text-xs opacity-70 leading-relaxed">
               Pure. No network, no SDK, no signer. Given a situation it returns one of four association mechanisms{" "}
@@ -82,15 +85,15 @@ export const ArchitectureDiagram = () => (
         <div className="flex-1">
           <div className="text-xs uppercase tracking-wider opacity-50 mb-2">Routes</div>
           <div className="flex flex-col gap-1.5">
-            <div className="rounded border border-base-300 px-3 py-2">
+            <div className="border-l-2 border-base-300 pl-3 py-1">
               <div className="text-sm font-mono">/</div>
               <div className="text-xs opacity-60">Server Component · no wallet</div>
             </div>
-            <div className="rounded border border-base-300 px-3 py-2">
+            <div className="border-l-2 border-base-300 pl-3 py-1">
               <div className="text-sm font-mono">/diagnose</div>
               <div className="text-xs opacity-60">Server Component · no wallet</div>
             </div>
-            <div className="rounded border border-warning/40 px-3 py-2">
+            <div className="border-l-2 border-warning/60 pl-3 py-1">
               <div className="text-sm font-mono">/acquire</div>
               <div className="text-xs opacity-60">quote is free · only signing needs a wallet</div>
             </div>
@@ -102,15 +105,20 @@ export const ArchitectureDiagram = () => (
       <div className="border-t border-base-300 pt-4">
         <div className="text-xs uppercase tracking-wider opacity-50 mb-2">The journey, and its order</div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="badge badge-ghost">quote</span>
+          {/* Deliberately not badges. These are stages in a sequence, not
+              controls — a pill shape here promises a click that never happens.
+              The enforced step is marked by weight and an underline instead. */}
+          <span className="font-mono text-xs opacity-60">quote</span>
           <span className="opacity-30" aria-hidden>
             →
           </span>
-          <span className="badge badge-primary">associate</span>
+          <span className="font-mono text-xs font-semibold text-primary underline decoration-2 underline-offset-4">
+            associate
+          </span>
           <span className="opacity-30" aria-hidden>
             →
           </span>
-          <span className="badge badge-ghost">swap</span>
+          <span className="font-mono text-xs opacity-60">swap</span>
         </div>
         <p className="text-xs opacity-60 mt-2 leading-relaxed">
           That order is enforced, not suggested. SaucerSwap&apos;s own documentation warns that a swap to an account

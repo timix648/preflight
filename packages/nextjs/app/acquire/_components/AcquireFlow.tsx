@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, useWriteContract } from "wagmi";
 import type { AccountProfile, AssociationState, SaucerToken, StrategySelection } from "~~/lib/onboarding";
 import {
@@ -70,6 +70,22 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
   const [hbarAmount, setHbarAmount] = useState("1");
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
+  /**
+   * The exact inputs the held quote was fetched for.
+   *
+   * Without this the header renders the LIVE amount beside the PREVIOUS
+   * quote's numbers, so typing 10 over a 1 briefly shows "10 ℏ → 54.961799
+   * SAUCE" — the answer for 1 HBAR wearing a 10 HBAR label. It is not a
+   * rounding artefact or a slow refresh; it is a wrong number presented as a
+   * right one, which is the failure this whole template argues against.
+   */
+  const [quotedFor, setQuotedFor] = useState<{ token: string; hbar: string } | null>(null);
+  /**
+   * Monotonic request id. Responses can land out of order — a debounce plus a
+   * slow relay makes it easy for the quote for "1" to arrive after the quote
+   * for "10" and overwrite the correct answer with a stale one.
+   */
+  const quoteRequestId = useRef(0);
   const [quoteError, setQuoteError] = useState<Explanation | null>(null);
   const [error, setError] = useState<Explanation | null>(null);
   const [busy, setBusy] = useState(false);
@@ -96,22 +112,45 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
   /** Quote from the ROUTER, not from the price feed. See swap.ts. */
   const refreshQuote = useCallback(async () => {
     if (!tokenId || !hbarAmount) return;
+    // Pin the inputs this request is for. Comparing against state later would
+    // read whatever the user has typed since, which is the bug.
+    const requestedToken = tokenId;
+    const requestedHbar = hbarAmount;
+    const requestId = ++quoteRequestId.current;
+
     setQuoteError(null);
     try {
       const response = await fetch(
-        `/api/onboarding/quote?token=${encodeURIComponent(tokenId)}&hbar=${encodeURIComponent(hbarAmount)}`,
+        `/api/onboarding/quote?token=${encodeURIComponent(requestedToken)}&hbar=${encodeURIComponent(requestedHbar)}`,
       );
       const body = await response.json();
-      if (response.ok) setQuote(body);
-      else {
+
+      // A newer request has already been issued, so this answer is for an
+      // amount the user has moved on from. Applying it would overwrite a
+      // correct quote with an outdated one.
+      if (requestId !== quoteRequestId.current) return;
+
+      if (response.ok) {
+        setQuote(body);
+        setQuotedFor({ token: requestedToken, hbar: requestedHbar });
+      } else {
         setQuote(null);
+        setQuotedFor(null);
         setQuoteError(body.error);
       }
     } catch (cause) {
+      if (requestId !== quoteRequestId.current) return;
       setQuote(null);
+      setQuotedFor(null);
       setQuoteError(explain(cause));
     }
   }, [tokenId, hbarAmount]);
+
+  /**
+   * True only when the held quote answers the question currently on screen.
+   * Everything that states a number is gated on this.
+   */
+  const quoteIsCurrent = !!quote && quotedFor?.token === tokenId && quotedFor?.hbar === hbarAmount;
 
   useEffect(() => {
     void refreshProfile();
@@ -228,7 +267,21 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
           <div>{quoteError.human}</div>
           <div className="text-sm opacity-90">{quoteError.fix}</div>
         </div>
-      ) : quote ? (
+      ) : quote && !quoteIsCurrent ? (
+        // A quote is held but it is for a different amount or token. Show that
+        // a new one is coming rather than the previous answer relabelled.
+        <div className="card bg-base-100 shadow">
+          <div className="card-body gap-2 py-5">
+            <div className="flex items-center gap-3">
+              <span className="loading loading-spinner loading-sm" aria-hidden />
+              <span className="text-sm opacity-70">Quoting {hbarAmount} ℏ from the router&hellip;</span>
+            </div>
+            <p className="text-xs opacity-60">
+              The previous quote is not shown, because it answered a different amount.
+            </p>
+          </div>
+        </div>
+      ) : quoteIsCurrent && quote ? (
         <div className="card bg-base-100 shadow">
           <div className="card-body gap-3">
             <div className="flex items-baseline justify-between flex-wrap gap-2">

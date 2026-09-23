@@ -19,6 +19,10 @@ const AcquirePage: NextPage = async () => {
 
   // Tokens with a published price are the ones a user can reason about.
   const usable = tokens.filter(token => token.priceUsd > 0).slice(0, 60);
+  // The picker has a search box, so it must say what it is NOT searching.
+  // Without this a token that exists on the DEX but sits outside this cap
+  // reads as "not listed" rather than "not shown here".
+  const totalListed = tokens.length;
 
   return (
     <div className="max-w-3xl w-full mx-auto px-5 py-10 flex flex-col gap-6">
@@ -42,7 +46,7 @@ const AcquirePage: NextPage = async () => {
           </span>
         </div>
       ) : (
-        <AcquireFlow tokens={usable} />
+        <AcquireFlow tokens={usable} totalListed={totalListed} />
       )}
 
       <details className="collapse collapse-arrow bg-base-200">

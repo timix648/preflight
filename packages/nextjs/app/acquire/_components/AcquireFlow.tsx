@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TokenPicker } from "./TokenPicker";
 import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { CheckBadgeIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
 import type { AccountProfile, AssociationState, SaucerToken, StrategySelection } from "~~/lib/onboarding";
 import {
   SAUCERSWAP_TESTNET_CONTRACTS,
@@ -62,7 +64,7 @@ interface QuoteResponse {
 
 type Explanation = { code: string; human: string; fix: string };
 
-export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
+export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; totalListed?: number }) => {
   const { address, isConnected } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
 
@@ -272,28 +274,13 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
           <label className="label" htmlFor="token">
             <span className="label-text font-medium">Token</span>
           </label>
-          <select
-            id="token"
-            className="select select-bordered font-mono text-sm"
-            value={tokenId}
-            onChange={event => setTokenId(event.target.value)}
-          >
-            {tokens.map(option => (
-              // A native <option> renders text only — no icon, no markup — so
-              // the marks are Unicode. The legend below says what they mean,
-              // because a bare glyph announces as "check mark" to a screen
-              // reader and means nothing to a sighted reader either.
-              <option key={option.tokenId} value={option.tokenId}>
-                {option.symbol} · {option.tokenId} · {option.decimals}dp
-                {option.dueDiligenceComplete ? " · ✓" : ""}
-                {option.isFeeOnTransfer ? " · ⚠ fee-on-transfer" : ""}
-              </option>
-            ))}
-          </select>
+          <TokenPicker id="token" tokens={tokens} value={tokenId} onChange={setTokenId} totalListed={totalListed} />
           <p className="text-xs opacity-60 mt-1.5">
-            <span aria-hidden>✓</span> due diligence complete on SaucerSwap · <span aria-hidden>⚠</span> fee-on-transfer
-            token. The id and decimals are shown because <strong>symbols are not unique</strong> — testnet lists five
-            different tokens whose symbol is &ldquo;HBAR&rdquo;, one of them at 0 decimals.
+            <CheckBadgeIcon className="inline h-3.5 w-3.5 text-success align-text-bottom" aria-hidden /> due diligence
+            complete on SaucerSwap ·{" "}
+            <ExclamationTriangleIcon className="inline h-3.5 w-3.5 text-warning align-text-bottom" aria-hidden />{" "}
+            fee-on-transfer. The id and decimals are shown because <strong>symbols are not unique</strong> — testnet
+            lists five different tokens whose symbol is &ldquo;HBAR&rdquo;, one of them at 0 decimals.
           </p>
         </div>
         <div className="form-control">

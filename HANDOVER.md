@@ -118,7 +118,7 @@ All four passed as of 20 September 2026.
 | 2 | **Logo** — `preflight-mark.svg` and `-dark.svg` are placeholders (concept 03). The approved flowing check-arrow needs exporting from the design tool. | design export |
 | 3 | **Demo video** — not started. Highest-value remaining item: a panel watches 90 seconds before reading 3,000 words, and the fail → associate → succeed sequence is already captured. | anyone |
 | 4 | **`/acquire` end-to-end evidence** — a real swap signed in a browser with a funded wallet. `EVIDENCE.md` lists it as outstanding. | a funded wallet |
-| 5 | **Harness Tier 3.5** — `chainValidation` is written but commented out in `.harness/spec.yaml`. Needs `HEDERA_OPERATOR_ID` and `HEDERA_OPERATOR_KEY` **exported in the shell**, not in `.env`. ECDSA only. | operator credentials |
+| 5 | **Harness Tier 3.5** — more than the two env vars this row used to claim. `chainValidation` only executes under `validate-semantic`; plain `validate` never reaches it. That path also requires `validator.enabled: true` and `spec.contract` — absent here — and runs the agent, which is billed. The operator vars are necessary but nowhere near sufficient. | a decision about scope and cost |
 | 6 | **Debug Contracts** and the wallet modal have had no visual pass under the new theme. | anyone |
 | 7 | **Clean-machine scaffold test** — the real G1 check. Impossible until the repo is public. | the public repo |
 | 8 | Hedera's official **self-check script** for the gate was promised for the week before the build window. Watch for it and run it before submitting. | Hedera |

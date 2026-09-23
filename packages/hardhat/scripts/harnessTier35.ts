@@ -20,13 +20,26 @@
  * to exactly one Hedera account, and asking the operator to retype it is an
  * invitation to run the chain validation against the wrong one.
  *
- * chainValidation stays COMMENTED OUT in .harness/spec.yaml, and this script
- * writes an enabled copy for the duration of the run. It is not an oversight
- * that the committed spec leaves it off: validateWorkspace calls
- * assertChainValidationOperatorEnv as soon as it sees enabled: true, so a spec
- * with it switched on would make `yarn harness:validate` throw for every
- * contributor who has no operator credentials — turning the ordinary gate into
- * something only one person can run.
+ * ---------------------------------------------------------------------------
+ * WHAT TIER 3.5 ACTUALLY COSTS — read before enabling it
+ *
+ * The operator env vars are necessary and nowhere near sufficient. Chain
+ * validation is provisioned by validateSemanticWorkspace and by nothing else:
+ * `validate` goes through runDeterministicValidation, which never reads
+ * chainValidation at all. Setting the vars and running `validate` produces
+ * passed=true with the operator's balance untouched — a green result that
+ * proves nothing, which this script was guilty of before it was corrected.
+ *
+ * Reaching the chain signer therefore means `validate-semantic`, which also
+ * demands validator.enabled: true and spec.contract, and which runs the agent.
+ * That is a billed operation. So the refusal in main() is deliberate: better
+ * to stop with the reason than to spend money discovering it, or worse, to
+ * report success without it.
+ *
+ * chainValidation also stays COMMENTED OUT in .harness/spec.yaml, and this
+ * script writes an enabled copy only for the duration of a run. A spec with it
+ * switched on permanently would make the ordinary gate unrunnable for any
+ * contributor without operator credentials.
  * ---------------------------------------------------------------------------
  */
 import { spawn } from "node:child_process";
@@ -132,6 +145,32 @@ async function main() {
   console.log(`\n🔎 [tier35 v2, retries enabled] Resolving ${wallet.address} on testnet…`);
   const accountId = await accountIdFor(wallet.address);
   console.log(`✅ Operator: ${accountId}  (${wallet.address})`);
+  // Refuse before touching anything, rather than run `validate` and report a
+  // green pass that never went near the chain.
+  //
+  // This script originally spawned `validate`, which cannot do chain
+  // validation at all: validateWorkspace calls runDeterministicValidation,
+  // and only validateSemanticWorkspace provisions a chain signer. The run
+  // came back passed=true, findings=0 and the operator's balance had not
+  // moved by a tinybar — a pass that proved nothing, which is worse than a
+  // failure.
+  const specText = fs.readFileSync(path.join(REPO_ROOT, ".harness/spec.yaml"), "utf8");
+  const missing: string[] = [];
+  if (!/^validator:/m.test(specText)) missing.push("`validator.enabled: true` (no validator block in the spec)");
+  if (!/^contract:/m.test(specText)) missing.push("`contract:` (semantic validation requires a contract path)");
+
+  if (missing.length > 0) {
+    console.log("\n⛔ Tier 3.5 cannot run against this spec.\n");
+    console.log("   Chain validation lives inside Tier 3 SEMANTIC validation (`validate-semantic`).");
+    console.log("   Plain `validate` never reaches it, so the operator credentials alone change nothing.\n");
+    console.log("   Missing from .harness/spec.yaml:");
+    for (const item of missing) console.log(`     · ${item}`);
+    console.log("\n   Enabling it also invokes the agent, which is a BILLED run.");
+    console.log("   Tiers 0–2 already pass and are what the eligibility gate checks:");
+    console.log("     node .yarn/releases/yarn-3.2.3.cjs harness:validate\n");
+    return;
+  }
+
   console.log("🔒 The private key is passed to the harness in memory only — never printed or written.");
   // The harness buffers everything until it finishes, so this looks frozen for
   // several minutes. Saying so is the difference between waiting and pressing
@@ -208,7 +247,9 @@ async function main() {
     process.execPath,
     [
       path.join(REPO_ROOT, "node_modules/hedera-harness/dist/index.js"),
-      "validate",
+      // validate-semantic, NOT validate — only the semantic path provisions
+      // a chain signer. See the refusal above.
+      "validate-semantic",
       ".harness/spec.tier35.generated.yaml",
     ],
     {

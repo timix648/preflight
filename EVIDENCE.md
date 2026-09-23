@@ -209,4 +209,4 @@ What remains is publication, not evidence:
 | What it needs | Blocked on |
 | --- | --- |
 | Clean-machine `npm create scaffold-hbar` check (gate item G1) | The repository being public |
-| Harness Tier 3.5 chain validation | `HEDERA_OPERATOR_ID` / `HEDERA_OPERATOR_KEY` exported in the shell |
+| Harness Tier 3.5 chain validation | Tier 3 semantic validation, which needs `validator.enabled`, `spec.contract` and a billed agent run — not merely the operator env vars |

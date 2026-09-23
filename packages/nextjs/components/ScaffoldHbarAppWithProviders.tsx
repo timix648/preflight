@@ -53,35 +53,33 @@ export const ScaffoldHbarAppWithProviders = ({ children }: { children: React.Rea
     setMounted(true);
   }, []);
 
-  const rainbowKitTheme = mounted
-    ? isDarkMode
-      ? darkTheme({
-          accentColor: "#8259ef",
-          accentColorForeground: "white",
-          borderRadius: "large",
-          fontStack: "system",
-          overlayBlur: "small",
-        })
-      : lightTheme({
-          accentColor: "#4f46e5",
-          accentColorForeground: "white",
-          borderRadius: "large",
-          fontStack: "system",
-          overlayBlur: "small",
-        })
-    : lightTheme({
-        accentColor: "#4f46e5",
-        accentColorForeground: "white",
-        borderRadius: "large",
-        fontStack: "system",
-        overlayBlur: "small",
-      });
+  // The wallet modal is the one surface RainbowKit paints itself, so its
+  // palette has to be handed over explicitly or it falls back to RainbowKit's
+  // stock indigo — which is exactly the generic accent this theme replaced.
+  // These are --color-primary / --color-primary-content from globals.css.
+  const rainbowKitTheme = (isDark: boolean) =>
+    (isDark ? darkTheme : lightTheme)({
+      accentColor: isDark ? "#8ba5ff" : "#0031ff",
+      accentColorForeground: isDark ? "#101214" : "#ffffff",
+      // "large" is 20px+ and floats away from the 6-12px scale the rest of the
+      // UI uses. "medium" lands on it.
+      borderRadius: "medium",
+      fontStack: "system",
+      overlayBlur: "small",
+    });
+
+  // Before mount the theme is unknown, so render light and let the effect
+  // correct it; picking either is a guess, and light is the SSR default.
+  const walletTheme = rainbowKitTheme(mounted && isDarkMode);
 
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ProgressBar height="3px" color="#2299dd" />
-        <RainbowKitProvider avatar={BlockieAvatar} coolMode initialChain={hederaTestnet} theme={rainbowKitTheme}>
+        {/* Was #2299dd — a blue belonging to no palette in this project. */}
+        <ProgressBar height="3px" color={mounted && isDarkMode ? "#8ba5ff" : "#0031ff"} />
+        {/* No coolMode: it fires a confetti burst on every wallet connect,
+            which undercuts a tool whose whole claim is that it is careful. */}
+        <RainbowKitProvider avatar={BlockieAvatar} initialChain={hederaTestnet} theme={walletTheme}>
           <ScaffoldHbarApp>{children}</ScaffoldHbarApp>
         </RainbowKitProvider>
       </QueryClientProvider>

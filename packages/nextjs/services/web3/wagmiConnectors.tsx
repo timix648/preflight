@@ -1,6 +1,6 @@
+import { optInBurnerWallet } from "./burnerOptIn";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import { metaMaskWallet, walletConnectWallet } from "@rainbow-me/rainbowkit/wallets";
-import { rainbowkitBurnerWallet } from "burner-connector";
 import * as chains from "viem/chains";
 import scaffoldConfig from "~~/scaffold.config";
 
@@ -25,7 +25,10 @@ export const wagmiConnectors = () => {
   if (scaffoldConfig.enableBurnerWallet && hasDevNetwork) {
     walletGroups.push({
       groupName: "Development",
-      wallets: [rainbowkitBurnerWallet],
+      // Opt-in wrapped: the stock burner reports itself authorized on every
+      // load, so it connects itself to first-time visitors and re-connects
+      // straight after an explicit Disconnect. See burnerOptIn.ts.
+      wallets: [optInBurnerWallet],
     });
   }
 

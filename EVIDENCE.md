@@ -151,12 +151,62 @@ order — rows 9 and 10 above look reversed by id. The table is ordered by
 **consensus timestamp**, which is the network's own ordering and the only one
 that means anything.
 
+## The browser journey, end to end
+
+Signed in a browser with an EVM wallet (OKX) on `0.0.10474072`, 20 September
+2026. Two different tokens, each associated and then acquired on the live DEX.
+
+| # | What it proves | Result | Link |
+| --- | --- | --- | --- |
+| 19 | Explicit association of SAUCE, signed in the UI | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.7314364-1789930492-934015409) |
+| 20 | **SAUCE acquired on SaucerSwap** through RouterV3 `0.0.19264` | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.7314364-1789930509-902591374) |
+| 21 | Explicit association of CLXY, a second token | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.7314364-1789933935-912556937) |
+| 22 | **CLXY acquired**, proving the journey is not token-specific | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.7314364-1789933958-462833689) |
+
+### The quote was not approximately right, it was exactly right
+
+The router quoted these amounts before signing; the mirror node reports these
+balances after. They agree to the last digit, which is the claim `/acquire`
+makes about quoting from the router rather than the price feed:
+
+| Token | Quoted | Held now | Decimals |
+| --- | --- | --- | --- |
+| SAUCE `0.0.1183558` | 54.961799 | **54.961799** | 6 |
+| CLXY `0.0.5365` | 51.240166 | **51.240166** | 6 |
+
+Neither is 8dp or 18dp. Code that assumes either is wrong about both, and
+wrong silently — the amount still looks plausible.
+
+### Both associations were explicit, and that is the interesting part
+
+The mirror node reports `automatic_association: false` for both tokens. The
+signing account accepts **unlimited** automatic associations, so the transfer
+would have associated them on arrival by itself. The kit associated first
+anyway, because the alternative is trusting that every downstream path agrees
+about slot state — and `/diagnose` exists precisely because that assumption is
+where accounts get it wrong.
+
+### What association actually costs
+
+| Step | Gas limit | Charged |
+| --- | --- | --- |
+| Association (HTS precompile `0x167`) | 800,000 | **0.79 HBAR** |
+| Swap (RouterV3) | 1,200,000 | **0.16 HBAR** |
+
+The association costs five times the swap despite the lower gas limit: HTS
+precompile calls carry a fixed HAPI-equivalent price that dwarfs execution
+gas. This is the whole reason the choice of mechanism matters. Association is
+not free, so *who pays* is a real question — which is what HIP-904 airdrop
+answers by putting the cost on the sender.
+
 ## Still outstanding
 
-All four association mechanisms are now captured on-chain. What remains needs a
-browser:
+Nothing on-chain. All four association mechanisms and the full browser journey
+are captured above.
 
-| What it proves | What it needs |
+What remains is publication, not evidence:
+
+| What it needs | Blocked on |
 | --- | --- |
-| A token acquired on a real DEX | The swap on `/acquire`, after association |
-| The `/acquire` journey end to end | A funded wallet in the UI |
+| Clean-machine `npm create scaffold-hbar` check (gate item G1) | The repository being public |
+| Harness Tier 3.5 chain validation | `HEDERA_OPERATOR_ID` / `HEDERA_OPERATOR_KEY` exported in the shell |

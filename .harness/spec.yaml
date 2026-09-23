@@ -24,6 +24,11 @@ agent: claude
 prd:
   - .harness/prds/01-core.md
 
+contract: .harness/acceptance-contract.json
+
+validator:
+  enabled: true
+
 validators:
   static: .harness/validators/static.json
   # Tier 2 — boots the app and walks every route named in the README.

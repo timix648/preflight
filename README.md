@@ -27,6 +27,34 @@ This template is experimental and has not been audited. Do not use it in
 production without your own review. It targets Hedera **testnet** by default and
 is not intended to write to mainnet.
 
+## 3a. Verify every claim in five minutes
+
+Nothing below needs a wallet, a key or a `.env` file. Each row is a claim this
+README makes and the exact way to falsify it.
+
+| Claim | Check it |
+| --- | --- |
+| The first journey is credential-free | `yarn install && yarn next:dev`, then open `/`. Live relay limits, DEX statistics and a decimals histogram render before you have an account. |
+| It reads the relay live, and says so honestly | `/` shows a `relay/<version>` badge **only** when the relay answered. Turn off your network and reload: the badge disappears and the prose changes to say the values are not a live reading. |
+| It reports slots that are **available**, not the ceiling | `/diagnose?account=0.0.10622718` → **`0 free of 1`**. Confirm independently: [`accounts/0.0.10622718`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.10622718) gives the ceiling, [`/tokens`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.10622718/tokens) shows the slot is already taken. |
+| ED25519 accounts are unusable with EVM tooling | `/diagnose?account=0.0.2` → long-zero address, ECRECOVER **not** compatible, and the reason: it returns a *different valid-looking* address rather than failing. |
+| Quotes come from the router, not a price feed | `/acquire`, pick SAUCE, enter 1. The panel shows the router figure, the published feed figure, and the divergence between them — measured above 10% at times. |
+| The association actually happened | Every transaction in [`EVIDENCE.md`](EVIDENCE.md) links to HashScan. The [failing transfer](https://hashscan.io/testnet/transaction/0.0.10505627-1789836087-477565839) carries **zero** token transfers; the [one 2.4s later](https://hashscan.io/testnet/transaction/0.0.10505627-1789836090-275408686) moves 100. |
+| The tests are real | `yarn test` — 144 unit + 17 contract, offline. `yarn workspace @sh/nextjs test:live` — 14 against live testnet. |
+| It passes the bounty's own gate | `yarn harness:validate` → `passed=true`, 0 findings, 7/7 routes. |
+
+### Two honest caveats about running the gate yourself
+
+`packages/hardhat/.env` must **not exist** when the harness runs — the static
+gate lists it as a forbidden path, and it scans the working tree rather than
+what git tracks. A fresh clone is fine; a machine that has done a deploy is
+not.
+
+If the harness cannot launch its own Chromium (Windows SmartScreen blocks the
+downloaded binary with `spawn UNKNOWN`), point it at the system browser:
+`PLAYWRIGHT_BROWSERS_PATH=<an empty directory>`. The harness then takes its
+documented system-Chrome fallback.
+
 ## 4. What is in this template
 
 - **A framework-free core library** — `packages/nextjs/lib/onboarding/`. No
@@ -35,17 +63,22 @@ is not intended to write to mainnet.
 - **The four-path association decision tree** — explicit, HIP-23 auto-slot,
   HIP-904 airdrop, HIP-551 batch — behind one `ensureAssociated()` call that
   always explains its choice.
-- **Three routes.** `/` and `/diagnose` work with **no wallet and no `.env`**,
-  and so does the router quote on `/acquire`. Only signing needs a wallet.
-  Plus the scaffold's Debug Contracts page.
+- **Five routes.** `/`, `/diagnose` and the router quote on `/acquire` work
+  with **no wallet, no key and no `.env`**. Only signing needs a wallet. The
+  scaffold's Debug Contracts and Block Explorer pages are kept as shipped.
 - **One small contract** — `AssociationProbe.sol`, demonstrating calls to the
   Hedera Token Service (`0x167`) and Account Service (`0x16a`) from Solidity,
   including the response-code mistake that makes those calls silently dangerous.
 - **A live SaucerSwap integration** — token list, prices, decimals, liveness,
   and real router quotes, all read without credentials. The full journey is
   quote → associate → swap, in that order, against verified deployments.
-- **76 tests.** 56 unit, 16 contract revert-path, plus 11 live-endpoint
-  integration tests kept in a separate suite.
+- **175 tests.** 144 unit and 17 contract revert-path tests that run offline,
+  plus 14 live-endpoint tests kept in a separate suite so a slow testnet can
+  never fail the ordinary run.
+- **A green harness gate.** `yarn harness:validate` passes Tiers 0–2 —
+  `passed=true`, 0 findings, 7/7 routes walked in a real browser with no
+  console errors. An acceptance contract for Tier 3 ships in
+  [`.harness/acceptance-contract.json`](.harness/acceptance-contract.json).
 - Solidity flavour: **Hardhat**. Package manager: **Yarn** (vendored).
 
 ## 5. Architecture
@@ -339,6 +372,46 @@ cannot currently receive.*
    says so rather than the UI asserting a number — mirror-node fungible balances
    come from a periodic file and legitimately lag a transfer that succeeded.
 
+## 11a. The eight traps, and what each one costs you
+
+The intro calls these "quieter" because none of them throws. Every one returns
+a plausible value, which is why they survive code review and fail in
+production.
+
+| # | Trap | What you'd write | What actually happens | Where it's handled |
+| --- | --- | --- | --- | --- |
+| 1 | **Association** | `transfer(token, to, amount)` | `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`. Nothing moves; the sender still pays the fee. | `association.ts` |
+| 2 | **Address duality** | Compare `ecrecover(...)` to the account's address | For a long-zero account ECRECOVER returns a **different, valid-looking** address. It does not fail — it disagrees, and your code rejects a legitimate signature. | `address.ts` |
+| 3 | **Key type** | Deploy with any funded account | ED25519 accounts have no EVM alias. Every EVM tool fails, and the error names none of this. | `keys.ts` |
+| 4 | **Key rotation** | Cache the key type once | Hedera keys rotate. A cached "this is ECDSA" becomes wrong without any event to tell you. Re-read it. | `keys.ts` |
+| 5 | **Decimals** | Assume 8, or assume 18 | The live DEX list spans many scales. Assume wrongly and the amount is still *plausible* — off by a power of ten, not obviously broken. | `units.ts`, branded types |
+| 6 | **Read consistency** | Read a balance after a transfer | Mirror-node fungible balances come from a periodic file. The number is stale, not wrong, and looks identical either way. | `mirror.ts`, `SourceBadge` |
+| 7 | **Status codes** | `if (config.PAYMASTER_ENABLED)` | Every `/config` value is a **string**, and `Boolean("false")` is `true`. You conclude a paymaster exists on a relay that has it switched off. | `relay.ts`, `configBoolean` |
+| 8 | **Relay limits** | `eth_getLogs` over 5,000 blocks | Queries wider than the limit return **empty**, which is indistinguishable from "there were no events". | `relay.ts`, rendered on `/` |
+
+### Three more this build found the hard way
+
+**The ceiling is not the availability.** `max_automatic_token_associations` is
+a maximum, not a remaining count, and the mirror node publishes no used-slot
+figure. An account with a ceiling of 1 that has already used it reports `1`,
+and code that trusts it picks the auto-slot path — producing the exact error
+this template removes. Counting the occupied slots requires a second request;
+`freeAutoSlots()` makes it, and only when the ceiling is finite.
+
+**Symbols are not unique.** SaucerSwap testnet lists **five** tokens whose
+symbol is `HBAR` — two WHBAR variants, and one at **0 decimals** actually
+named something else entirely. There are three different `HBARX` at 8, 6 and 8
+decimals. Any picker showing only a symbol cannot identify what the user is
+about to buy, which is why every token is shown as `SYMBOL · 0.0.x · Ndp`.
+
+**Association costs five times the swap.** Measured on testnet: associating
+through the HTS precompile charged **0.79 HBAR**, the SaucerSwap router call
+**0.16 HBAR** — despite the association having the *lower* gas limit. HTS
+precompile calls carry a fixed HAPI-equivalent price that dwarfs execution
+gas. This is why *which* mechanism you choose is an economic question and not
+only a technical one, and why HIP-904 airdrop — where the **sender** pays —
+exists at all.
+
 ## 12. Extending this template
 
 **1. Add a new association strategy.** Add the variant to `AssociationStrategy`
@@ -370,10 +443,12 @@ in the library, so nothing breaks.
 ## 13. Testing
 
 ```bash
-yarn test          # 56 unit + 16 contract tests. Offline, ~14s.
-yarn next:test     # unit only
-yarn hardhat:test  # contract only
-yarn workspace @sh/nextjs test:live   # 7 live-endpoint tests
+yarn test          # 144 unit + 17 contract tests. Offline.
+yarn next:test     # 144 unit only
+yarn hardhat:test  # 17 contract only
+yarn workspace @sh/nextjs test:live   # 14 live-endpoint tests, hits real testnet
+
+yarn harness:validate   # the bounty's own gate: static + commands + route walk
 ```
 
 Live-endpoint tests live in a **separate suite on purpose**. A unit suite that

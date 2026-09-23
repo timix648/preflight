@@ -1,0 +1,116 @@
+{
+  "name": "preflight",
+  "summary": "Preflight lets a user acquire and hold any Hedera token without ever hitting TOKEN_NOT_ASSOCIATED_TO_ACCOUNT. It implements all four association mechanisms behind one API that picks correctly for a given account and states why. The assertions below grade that claim, not the prose around it.",
+  "notes": [
+    "Only C9 is executableWithTestSigner. Every such assertion spends real testnet HBAR and adds minutes to the run, so the on-chain journey is proven once, end to end, rather than in pieces.",
+    "The credential-free assertions are first and weighted critical on purpose: a stranger with no wallet, no key and no .env must see true live data. That is the claim most templates cannot make, and the one that fails most quietly if it regresses.",
+    "Values quoted below (account ids, token ids, decimals) are live testnet facts verified on 20 September 2026. An assertion that fails because the CHAIN changed is not the same as one that fails because the APP changed — say which in the evidence."
+  ],
+  "assertions": [
+    {
+      "id": "C1",
+      "statement": "The home page renders live Hedera data with no wallet connected, no key and no .env file present.",
+      "howToVerify": "Navigate to /. Do not connect a wallet. Confirm the page renders content (not an error or a bare connect prompt) and that the relay panel 'What this relay will actually let you do' shows a table of values. Confirm the browser console logs no errors.",
+      "severity": "critical",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C2",
+      "statement": "The relay panel distinguishes a live reading from a compiled-in fallback, and never presents the fallback as live.",
+      "howToVerify": "On /, find the relay section. If a version badge (e.g. 'relay/0.78.5') is shown, the prose must say the values were read live from the /config endpoint. If the relay did not answer, the badge must be ABSENT and the prose must state the values are not a live reading. One of those two states must hold — a badge alongside 'did not answer' prose, or live prose with no badge, is a failure.",
+      "severity": "critical",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C3",
+      "statement": "/diagnose correctly identifies an ED25519 account with a long-zero address as unusable with EVM tooling, without a wallet.",
+      "howToVerify": "Navigate to /diagnose?account=0.0.2. Confirm it reports key type ED25519, address form long-zero, ECRECOVER compatible 'no', and automatic slots '0 free of 0'. The ECRECOVER explanation must say it returns a DIFFERENT valid-looking address rather than failing — that distinction is the point of the check.",
+      "severity": "critical",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C4",
+      "statement": "/diagnose reports automatic association slots that are STILL AVAILABLE, not the account's ceiling.",
+      "howToVerify": "Navigate to /diagnose?account=0.0.10622718. This account has a ceiling of 1 with the slot already occupied. It must read '0 free of 1' and must NOT recommend the auto-slot mechanism, because a transfer relying on a slot would fail. Compare with /diagnose?account=0.0.10608004, which accepts unlimited associations and must read 'unlimited (-1)'. Verify the slot figures against the mirror node: GET /api/v1/accounts/0.0.10622718 gives max_automatic_token_associations, and GET /api/v1/accounts/0.0.10622718/tokens shows which relationships are automatic_association=true.",
+      "severity": "critical",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C5",
+      "statement": "/diagnose judges all four association mechanisms against the specific account, including the ones that do not apply and why.",
+      "howToVerify": "On /diagnose?account=0.0.10622718, find the four-mechanism panel. Auto-slot (HIP-23), Batch (HIP-551), Explicit and Airdrop (HIP-904) must each be present with a verdict. Exactly one must be marked chosen. Each rejected mechanism must carry a reason specific to this account, not generic text. The chosen mechanism must not contradict the association verdict shown above it.",
+      "severity": "critical",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C6",
+      "statement": "/acquire produces a real router quote with no wallet connected.",
+      "howToVerify": "Navigate to /acquire without connecting. Choose SAUCE (0.0.1183558) and enter 1 in the HBAR field. A quote must appear stating an amount of SAUCE. It must be labelled as quoted by the router. The page must not require a wallet to reach this point — a connect-wallet dead end here is a failure.",
+      "severity": "critical",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C7",
+      "statement": "A quote is never displayed against an amount it was not calculated for.",
+      "howToVerify": "On /acquire with a quote showing for 1 HBAR, change the amount to 10. While the new quote is being fetched, the previous figure must NOT be shown beside the new amount. Either a pending state appears, or the new correct quote does. Observing '10 h -> <the 1 HBAR result>' at any point is a failure. Confirm the settled figure is roughly ten times the 1 HBAR figure, allowing for price impact.",
+      "severity": "major",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C8",
+      "statement": "The token picker identifies tokens by id and decimals, not by symbol alone.",
+      "howToVerify": "Open the token picker on /acquire. Every entry must show the 0.0.x token id and its decimal places alongside the symbol. This matters because symbols are not unique on Hedera: the SaucerSwap testnet list contains several tokens whose symbol is 'HBAR', including one at 0 decimals. A picker showing only symbols cannot identify what the user is buying.",
+      "severity": "major",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C9",
+      "statement": "A funded account can associate a token and acquire it on SaucerSwap through the UI, and the effect is visible on the mirror node.",
+      "howToVerify": "Connect the test signer using the wallet connection recipe. On /acquire choose SAUCE (0.0.1183558) and 1 HBAR. Complete step 1 (associate) and then step 2 (swap), confirming each in the wallet. Then verify on the mirror node, not from the UI: GET /api/v1/accounts/{signerAccountId}/tokens?token.id=0.0.1183558 must show a relationship with a non-zero balance. The UI must report the swap as confirmed only after the receipt exists — a success message shown merely because the wallet returned a hash is a failure of this assertion.",
+      "severity": "critical",
+      "walletRequired": true,
+      "verifiableWithoutCredentials": false,
+      "executableWithTestSigner": true
+    },
+    {
+      "id": "C10",
+      "statement": "The swap control is unreachable until the token can actually be held.",
+      "howToVerify": "On /acquire with a wallet connected and the chosen token not yet associated, the step 2 swap control must be disabled, and the page must say why. Calling the router before association is the exact failure this template exists to remove, so an enabled swap button in that state is a failure.",
+      "severity": "major",
+      "walletRequired": true,
+      "verifiableWithoutCredentials": false
+    },
+    {
+      "id": "C11",
+      "statement": "Disconnecting a wallet is durable across a reload.",
+      "howToVerify": "Connect the test signer, reload, and confirm the session persists. Then click Disconnect and reload again. The header must still show a connect control and no account. A wallet that returns after an explicit disconnect is a failure — the button would not mean anything.",
+      "severity": "major",
+      "walletRequired": true,
+      "verifiableWithoutCredentials": false
+    },
+    {
+      "id": "C12",
+      "statement": "Failures are reported as a human sentence with a cause, never as a raw RPC string or a silent blank.",
+      "howToVerify": "On /acquire, select a token with no direct WHBAR pool (try 0.0.1418651). The page must explain that no pool exists for the pair rather than showing INVALID_PATH, an empty quote, or nothing. More generally, no route may display 'NaN', '[object Object]', 'Application error' or an unhandled error overlay.",
+      "severity": "major",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    },
+    {
+      "id": "C13",
+      "statement": "Every route named in the README loads and renders meaningful content.",
+      "howToVerify": "Visit /, /diagnose, /acquire, /debug and /blockexplorer. Each must return a non-error page with real content. /blockexplorer is expected to state that it only serves a local network and to direct the reader to HashScan — that is correct behaviour for a testnet target, not a failure.",
+      "severity": "minor",
+      "walletRequired": false,
+      "verifiableWithoutCredentials": true
+    }
+  ]
+}

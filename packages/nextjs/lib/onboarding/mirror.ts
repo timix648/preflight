@@ -192,6 +192,51 @@ export async function getTokenRelationship(
   };
 }
 
+/**
+ * How many of an account's HIP-23 automatic slots are currently occupied.
+ *
+ * The mirror node does not publish a used-slot count on the account object —
+ * `max_automatic_token_associations` is the ceiling and nothing else — so the
+ * only way to know is to count the relationships that were created
+ * automatically. There is no server-side filter for that, hence the paging.
+ *
+ * Returns `null` when the account has more relationships than the page budget
+ * allows. A wrong number here is worse than no number: it decides whether the
+ * kit associates a token before transferring one, and guessing high makes the
+ * transfer fail with the single error this template exists to prevent.
+ *
+ * Dissociating frees a slot, so counting live relationships gives the current
+ * figure rather than a historical high-water mark.
+ */
+export async function countAutomaticAssociations(
+  accountId: string,
+  options: MirrorOptions = {},
+  maxPages = 10,
+): Promise<number | null> {
+  let path = `/accounts/${encodeURIComponent(accountId)}/tokens?limit=100`;
+  let used = 0;
+
+  for (let page = 0; page < maxPages; page++) {
+    const raw = await get<{
+      tokens?: Record<string, unknown>[];
+      links?: { next?: string | null };
+    }>(path, options);
+
+    for (const entry of raw.tokens ?? []) {
+      if (entry.automatic_association === true) used++;
+    }
+
+    const next = raw.links?.next;
+    if (!next) return used;
+
+    // `links.next` is absolute from the host root and repeats the /api/v1
+    // prefix that baseUrl already carries. Strip it or the path doubles up.
+    path = next.replace(/^\/api\/v1/, "");
+  }
+
+  return null;
+}
+
 /** Token metadata, including the decimals nothing may assume. */
 export async function getToken(tokenId: string, options: MirrorOptions = {}): Promise<TokenSummary> {
   let raw: Record<string, unknown>;

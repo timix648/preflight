@@ -76,7 +76,12 @@ const Diagnosis = async ({ account }: { account: string }) => {
   }
 
   const hasHbar = balance ? (balance.value as bigint) > 0n : false;
+  // The ceiling and what is left of it are different numbers, and only the
+  // second decides whether a transfer works. They are equal for the unlimited
+  // and zero accounts everyone tests with, which is how using the ceiling here
+  // went unnoticed.
   const slots = profile.autoAssociationSlots;
+  const freeSlots = profile.freeAutoAssociationSlots;
 
   // What would the kit do if YOU sent this account a new token right now?
   //
@@ -98,7 +103,7 @@ const Diagnosis = async ({ account }: { account: string }) => {
   // panel below it. Building it twice is how the two would drift apart.
   const strategyContext = {
     alreadyAssociated: false,
-    freeAutoSlots: slots,
+    freeAutoSlots: freeSlots,
     recipientCanSign: false,
     recipientHasHbarForFees: hasHbar,
     senderControlsRecipient: false,
@@ -168,14 +173,16 @@ const Diagnosis = async ({ account }: { account: string }) => {
           <h2 className="card-title text-base">Holding tokens</h2>
           <Row
             label="Automatic slots"
-            value={slots === -1 ? "unlimited (-1)" : slots}
-            tone={slots === -1 ? "good" : slots > 0 ? "good" : "bad"}
+            value={slots === -1 ? "unlimited (-1)" : `${freeSlots} free of ${slots}`}
+            tone={slots === -1 ? "good" : freeSlots > 0 ? "good" : "bad"}
             note={
               slots === -1
                 ? "HIP-23 unlimited. Any token sent here associates on arrival with no approval."
-                : slots > 0
-                  ? "Tokens arriving will consume a slot until these run out."
-                  : "No free slots. A transfer of a new token to this account right now FAILS with TOKEN_NOT_ASSOCIATED_TO_ACCOUNT."
+                : freeSlots > 0
+                  ? `Tokens arriving will consume a slot until these ${freeSlots} run out.`
+                  : slots > 0
+                    ? "The ceiling is not the answer: every slot is already occupied, so a transfer of a new token to this account right now FAILS with TOKEN_NOT_ASSOCIATED_TO_ACCOUNT."
+                    : "No automatic slots at all. A transfer of a new token to this account right now FAILS with TOKEN_NOT_ASSOCIATED_TO_ACCOUNT."
             }
           />
           <div className="flex items-center gap-2 py-2">

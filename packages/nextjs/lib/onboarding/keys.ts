@@ -23,7 +23,8 @@
  * Framework-free. See AGENTS.md.
  */
 import { classifyAddress } from "./address";
-import { type MirrorOptions, getAccount } from "./mirror";
+import { UNLIMITED_AUTO_SLOTS } from "./association";
+import { type MirrorOptions, countAutomaticAssociations, getAccount } from "./mirror";
 import type { AccountProfile, KeyType, VerificationRoute } from "./types";
 
 /**
@@ -78,6 +79,7 @@ export async function profileAccount(idOrAddress: string, options: MirrorOptions
   // and deriving it locally would quietly produce the long-zero form instead.
   const reported = account.evmAddress ?? undefined;
   const classified = reported ? classifyAddress(reported) : classifyAddress(account.accountId);
+  const max = account.maxAutomaticTokenAssociations;
 
   return {
     accountId: account.accountId,
@@ -86,9 +88,40 @@ export async function profileAccount(idOrAddress: string, options: MirrorOptions
     ecrecoverCompatible: classified.ecrecoverCompatible && account.keyType === "ECDSA",
     keyType: account.keyType,
     verificationRoute: verificationRouteFor(account.keyType),
-    autoAssociationSlots: account.maxAutomaticTokenAssociations,
-    freeAutoAssociationSlots: account.maxAutomaticTokenAssociations,
+    autoAssociationSlots: max,
+    freeAutoAssociationSlots: await freeAutoSlots(account.accountId, max, options),
   };
+}
+
+/**
+ * Slots still available, which is NOT the same as the ceiling.
+ *
+ * This used to return `max_automatic_token_associations` unchanged, so an
+ * account with a ceiling of 1 that had already used its slot reported one
+ * free. selectStrategy believed it, chose `auto-slot`, and the transfer then
+ * failed with TOKEN_NOT_ASSOCIATED_TO_ACCOUNT — the exact error this template
+ * exists to prevent, produced by the code meant to prevent it. Live example:
+ * testnet 0.0.10622718, ceiling 1, one automatic association already held.
+ *
+ * It stayed invisible because the accounts anyone tests with report -1, where
+ * the ceiling and the free count are identical.
+ *
+ * Unlimited and zero are answered without a second request, so the common
+ * paths cost exactly what they did before. Only a finite ceiling pays for the
+ * count, and only a finite ceiling can be wrong.
+ */
+async function freeAutoSlots(accountId: string, max: number, options: MirrorOptions): Promise<number> {
+  if (max === UNLIMITED_AUTO_SLOTS) return UNLIMITED_AUTO_SLOTS;
+  if (max <= 0) return 0;
+
+  const used = await countAutomaticAssociations(accountId, options).catch(() => null);
+
+  // Unknown resolves to zero, not to `max`. Reporting none free costs an
+  // association that may have been unnecessary; reporting some free when
+  // there are none costs a failed transfer. Only one of those is recoverable.
+  if (used === null) return 0;
+
+  return Math.max(0, max - used);
 }
 
 /**

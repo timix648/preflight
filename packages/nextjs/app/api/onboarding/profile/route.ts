@@ -42,7 +42,9 @@ export async function GET(request: Request) {
 
     const selection = selectStrategy({
       alreadyAssociated: association?.associated ?? false,
-      freeAutoSlots: profile.autoAssociationSlots,
+      // The FREE count, not the ceiling. Passing the ceiling made this choose
+      // auto-slot for an account whose only slot was already taken.
+      freeAutoSlots: profile.freeAutoAssociationSlots,
       // The connected wallet IS the recipient here: it can sign, by definition.
       recipientCanSign: true,
       recipientHasHbarForFees: hasHbar,

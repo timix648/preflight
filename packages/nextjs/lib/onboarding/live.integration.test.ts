@@ -10,6 +10,7 @@
  * They are the day-8 re-probe from the build plan, expressed as code rather
  * than as a checklist item someone has to remember.
  */
+import { UNLIMITED_AUTO_SLOTS, selectStrategy } from "./association";
 import { SAUCERSWAP_TESTNET_CONTRACTS } from "./contracts";
 import { profileAccount, verificationRouteFor } from "./keys";
 import { getAccount, getToken } from "./mirror";
@@ -187,6 +188,46 @@ describe("SaucerSwap router — the execution path", () => {
           tokenDecimals: 8,
         }),
       ).rejects.toThrow();
+    },
+    TIMEOUT,
+  );
+});
+
+describe("automatic association slots, against real accounts", () => {
+  it(
+    "reports slots LEFT, not the ceiling, for an account whose slot is taken",
+    async () => {
+      // 0.0.10622718 on testnet: ceiling of 1, one automatic association
+      // already held. The ceiling and the free count differ here, which is
+      // the case every -1 account hides. profileAccount used to return the
+      // ceiling for both, so this account reported a free slot it does not
+      // have and selectStrategy chose auto-slot -- a transfer that fails
+      // with the exact error this template exists to prevent.
+      const profile = await profileAccount("0.0.10622718");
+
+      expect(profile.autoAssociationSlots).toBe(1);
+      expect(profile.freeAutoAssociationSlots).toBe(0);
+
+      const choice = selectStrategy({
+        alreadyAssociated: false,
+        freeAutoSlots: profile.freeAutoAssociationSlots,
+        recipientCanSign: true,
+        recipientHasHbarForFees: true,
+        senderControlsRecipient: false,
+        preferSingleApproval: true,
+        batchSupported: true,
+      });
+      expect(choice.strategy).not.toBe("auto-slot");
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "still answers unlimited for an unlimited account",
+    async () => {
+      const profile = await profileAccount("0.0.10608004");
+      expect(profile.autoAssociationSlots).toBe(UNLIMITED_AUTO_SLOTS);
+      expect(profile.freeAutoAssociationSlots).toBe(UNLIMITED_AUTO_SLOTS);
     },
     TIMEOUT,
   );

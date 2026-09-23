@@ -29,6 +29,17 @@ const SUGGESTIONS = [
   { id: "0.0.2", note: "ED25519, long-zero address, zero automatic slots" },
   { id: "0.0.10608004", note: "ECDSA with a key-derived address and unlimited slots" },
   { id: "0.0.10604882", note: "Threshold key — no single ECRECOVER can speak for it" },
+  // The case the other three cannot show. They are 0 slots or unlimited, where
+  // the ceiling and the free count are the same number — which is exactly why
+  // reporting the ceiling as availability went unnoticed. This one has a
+  // ceiling of 1 with the slot already taken, so it reads "0 free of 1" and
+  // the kit must pick something other than auto-slot.
+  //
+  // Not an account this project controls: if its holder ever dissociates that
+  // token it becomes 1 free of 1 and stops demonstrating the point. The note
+  // below says what it is meant to show, so a mismatch is visible rather than
+  // silently uninteresting.
+  { id: "0.0.10622718", note: "One automatic slot, already used — free is 0 even though the ceiling is 1" },
 ];
 
 const Row = ({

@@ -145,6 +145,36 @@ describe("SaucerSwap router — the execution path", () => {
   );
 
   it(
+    "every number in a quote is finite, so nothing can render as NaN",
+    async () => {
+      // This replaces the Tier 2 gate's "NaN" forbidden-text rule, which had
+      // to be removed: the gate matches case-insensitively, so it fired on the
+      // live SaucerSwap token `banana` (0.0.5260917) rather than on any real
+      // NaN. The underlying risk is genuine — `decimals` arrives as a string
+      // from one API and a number from another, and NaN renders as ordinary
+      // text instead of throwing — so it is asserted here, precisely, against
+      // a real router response.
+      const quote = await routerQuote({
+        hbarAmount: "1",
+        tokenEvmAddress: SAUCE_EVM,
+        tokenDecimals: SAUCE_DECIMALS,
+      });
+
+      for (const [field, value] of Object.entries(quote)) {
+        if (typeof value === "number") {
+          expect(Number.isFinite(value), `${field} is ${value}`).toBe(true);
+        }
+      }
+
+      // The formatted string is what the UI actually prints, so check the
+      // rendered form too, not only the numbers behind it.
+      expect(quote.amountOutFormatted).not.toMatch(/NaN|Infinity|undefined/);
+      expect(Number.isFinite(Number(quote.amountOutFormatted))).toBe(true);
+    },
+    TIMEOUT,
+  );
+
+  it(
     "slippage_floor_is_always_below_the_quote",
     async () => {
       const quote = await routerQuote({

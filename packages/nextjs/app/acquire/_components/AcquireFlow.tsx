@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAccount, useWriteContract } from "wagmi";
+import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import type { AccountProfile, AssociationState, SaucerToken, StrategySelection } from "~~/lib/onboarding";
 import {
   SAUCERSWAP_TESTNET_CONTRACTS,
@@ -94,6 +94,27 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
 
   const token = useMemo(() => tokens.find(t => t.tokenId === tokenId) ?? null, [tokens, tokenId]);
 
+  /**
+   * Submitted is not succeeded.
+   *
+   * writeContractAsync resolves as soon as the wallet hands back a hash — the
+   * transaction has not reached consensus and may still revert. This panel
+   * used to render alert-success saying "Swap submitted." the moment that
+   * happened, so a reverted swap and a successful one looked identical and
+   * the only way to find out which you had was to open HashScan.
+   *
+   * On Hedera a router call can fail for reasons that are invisible from the
+   * hash alone — INSUFFICIENT_GAS through a precompile, or the slippage floor
+   * being crossed between quoting and mining — so the receipt is the only
+   * honest source for "did this work".
+   */
+  const associateReceipt = useWaitForTransactionReceipt({
+    hash: (associateTx as `0x${string}` | null) ?? undefined,
+  });
+  const swapReceipt = useWaitForTransactionReceipt({
+    hash: (swapTx as `0x${string}` | null) ?? undefined,
+  });
+
   /** Re-read association state. Never cached: keys and balances move. */
   const refreshProfile = useCallback(async () => {
     if (!address || !tokenId) return;
@@ -152,6 +173,21 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
    */
   const quoteIsCurrent = !!quote && quotedFor?.token === tokenId && quotedFor?.hbar === hbarAmount;
 
+  /**
+   * A transaction is an answer about ONE token and ONE account. Carrying it
+   * across a change of either turns it into a claim about something it never
+   * touched: associate SAUCE, switch the picker to USDC, and the success
+   * panel below would read "USDC is now in this account" while linking to the
+   * SAUCE transaction. The hash is real, the sentence is false.
+   *
+   * Same reason the quote is pinned to the inputs it was fetched for.
+   */
+  useEffect(() => {
+    setAssociateTx(null);
+    setSwapTx(null);
+    setError(null);
+  }, [tokenId, address]);
+
   useEffect(() => {
     void refreshProfile();
   }, [refreshProfile]);
@@ -166,6 +202,7 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
   const associate = async () => {
     if (!address || !token) return;
     setError(null);
+    setAssociateTx(null);
     setBusy(true);
     try {
       const hash = await writeContractAsync({
@@ -188,6 +225,10 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
   const swap = async () => {
     if (!address || !token || !quote) return;
     setError(null);
+    // Drop the previous result first: between clicking and the wallet
+    // returning a hash, the old "Swap complete" would otherwise still be on
+    // screen describing a run that is no longer the one in progress.
+    setSwapTx(null);
     setBusy(true);
     try {
       const hash = await writeContractAsync({
@@ -238,13 +279,22 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
             onChange={event => setTokenId(event.target.value)}
           >
             {tokens.map(option => (
+              // A native <option> renders text only — no icon, no markup — so
+              // the marks are Unicode. The legend below says what they mean,
+              // because a bare glyph announces as "check mark" to a screen
+              // reader and means nothing to a sighted reader either.
               <option key={option.tokenId} value={option.tokenId}>
                 {option.symbol} · {option.tokenId} · {option.decimals}dp
-                {option.dueDiligenceComplete ? " · vetted" : ""}
-                {option.isFeeOnTransfer ? " · fee-on-transfer" : ""}
+                {option.dueDiligenceComplete ? " · ✓" : ""}
+                {option.isFeeOnTransfer ? " · ⚠ fee-on-transfer" : ""}
               </option>
             ))}
           </select>
+          <p className="text-xs opacity-60 mt-1.5">
+            <span aria-hidden>✓</span> due diligence complete on SaucerSwap · <span aria-hidden>⚠</span> fee-on-transfer
+            token. The id and decimals are shown because <strong>symbols are not unique</strong> — testnet lists five
+            different tokens whose symbol is &ldquo;HBAR&rdquo;, one of them at 0 decimals.
+          </p>
         </div>
         <div className="form-control">
           <label className="label" htmlFor="hbar">
@@ -363,6 +413,17 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
         </div>
       ) : null}
 
+      {associateTx && associateReceipt.isLoading && (
+        <p className="text-xs opacity-70 flex items-center gap-2">
+          <span className="loading loading-spinner loading-xs" aria-hidden />
+          Association submitted — waiting for consensus&hellip;
+        </p>
+      )}
+      {associateTx && associateReceipt.isError && (
+        <p className="text-xs text-error">
+          The association transaction reverted or could not be confirmed. Check it on HashScan before swapping.
+        </p>
+      )}
       {associateTx && (
         <a
           className="link link-hover font-mono text-xs break-all"
@@ -387,8 +448,10 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
               : undefined
         }
       >
-        {busy || isPending ? <span className="loading loading-spinner loading-sm" /> : null}
-        Step 2 — swap {hbarAmount} ℏ for {token?.symbol}
+        {busy || isPending || swapReceipt.isLoading ? <span className="loading loading-spinner loading-sm" /> : null}
+        {swapReceipt.isSuccess
+          ? `Swap again — ${hbarAmount} ℏ for ${token?.symbol}`
+          : `Step 2 — swap ${hbarAmount} ℏ for ${token?.symbol}`}
       </button>
       {isConnected && !associated && (
         <p className="text-xs opacity-60 -mt-3">
@@ -398,8 +461,40 @@ export const AcquireFlow = ({ tokens }: { tokens: SaucerToken[] }) => {
       )}
 
       {swapTx && (
-        <div className="alert alert-success flex-col items-start gap-1">
-          <div className="font-bold">Swap submitted.</div>
+        // Three states, never one. "Submitted" is a claim about the wallet;
+        // only the receipt is a claim about the network.
+        <div
+          className={`alert flex-col items-start gap-1 ${
+            swapReceipt.isSuccess ? "alert-success" : swapReceipt.isError ? "alert-error" : "alert-info"
+          }`}
+        >
+          {swapReceipt.isLoading && (
+            <div className="flex items-center gap-2 font-bold">
+              <span className="loading loading-spinner loading-sm" aria-hidden />
+              Swap submitted — waiting for consensus&hellip;
+            </div>
+          )}
+          {swapReceipt.isSuccess && (
+            <>
+              <div className="font-bold">
+                Swap complete — {quoteIsCurrent && quote ? `about ${quote.amountOutFormatted} ` : ""}
+                {token?.symbol} is now in this account.
+              </div>
+              <div className="text-sm">
+                Confirmed on chain, not merely submitted. Gas used: {swapReceipt.data?.gasUsed?.toString() ?? "—"}.
+              </div>
+            </>
+          )}
+          {swapReceipt.isError && (
+            <>
+              <div className="font-bold">The swap did not succeed.</div>
+              <div className="text-sm">
+                It reached the network but reverted or could not be confirmed. Common causes here are INSUFFICIENT_GAS
+                through the router, or the price moving past the 1% slippage floor between the quote and the transaction
+                being mined. Open it on HashScan for the reason.
+              </div>
+            </>
+          )}
           <a
             className="link link-hover font-mono text-sm break-all"
             href={hashscanUrl(swapTx)}

@@ -299,6 +299,16 @@ export async function associationState(
   accountId: string,
   tokenId: string,
   options: MirrorOptions = {},
+  /**
+   * The recipient's free HIP-23 slots, when the caller already knows them
+   * (`-1` unlimited, `0` none). Optional so this stays a one-request read.
+   *
+   * Without it, "not associated" cannot be turned into "the transfer will
+   * fail" — an account with a free slot associates on arrival and the
+   * transfer succeeds. Omitting it is safe; the sentence simply stops short
+   * of predicting an outcome it cannot know.
+   */
+  freeAutoSlots?: number,
 ): Promise<AssociationState> {
   const relationship = await getTokenRelationship(accountId, tokenId, options);
 
@@ -311,10 +321,35 @@ export async function associationState(
     };
   }
 
+  // Not associated is not the same as "the transfer fails". This used to
+  // claim TOKEN_NOT_ASSOCIATED_TO_ACCOUNT unconditionally, which flatly
+  // contradicted selectStrategy one field away in the same API response:
+  // that picked `auto-slot` and said the transfer would associate on arrival.
+  // For an account with slots, selectStrategy was right and this was wrong.
+  const hasFreeSlot = freeAutoSlots !== undefined && freeAutoSlots !== 0;
+
+  if (hasFreeSlot) {
+    return {
+      associated: false,
+      reason:
+        freeAutoSlots === -1
+          ? "Not associated yet, but the account takes unlimited automatic associations (HIP-23), so a transfer associates the token on arrival."
+          : `Not associated yet, but the account has ${freeAutoSlots} free automatic association slot${freeAutoSlots === 1 ? "" : "s"} (HIP-23), so a transfer associates the token on arrival.`,
+    };
+  }
+
+  if (freeAutoSlots === 0) {
+    return {
+      associated: false,
+      reason:
+        "Not associated, and the account has no free automatic association slot. A transfer to it right now fails with TOKEN_NOT_ASSOCIATED_TO_ACCOUNT.",
+    };
+  }
+
   return {
     associated: false,
     reason:
-      "Not associated and no automatic slot has been used. A transfer to this account right now fails with TOKEN_NOT_ASSOCIATED_TO_ACCOUNT.",
+      "Not associated. Whether a transfer succeeds depends on the account's free automatic association slots, which were not read here.",
   };
 }
 

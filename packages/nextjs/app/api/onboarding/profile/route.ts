@@ -33,7 +33,9 @@ export async function GET(request: Request) {
 
     const [balance, association] = await Promise.all([
       readHbarFromMirror(profile.accountId).catch(() => null),
-      token ? associationState(profile.accountId, token) : Promise.resolve(null),
+      // Pass the slot count, or the verdict cannot tell "not associated"
+      // apart from "the transfer will fail" — see associationState().
+      token ? associationState(profile.accountId, token, {}, profile.freeAutoAssociationSlots) : Promise.resolve(null),
     ]);
 
     const hasHbar = balance ? (balance.value as bigint) > 0n : false;

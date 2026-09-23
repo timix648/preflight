@@ -9,6 +9,7 @@
 import {
   type StrategyContext,
   UNLIMITED_AUTO_SLOTS,
+  associationState,
   describeStrategy,
   hashscanUrl,
   selectStrategy,
@@ -270,6 +271,94 @@ describe("every strategy can describe itself for the comparison table", () => {
       expect(described.name).toBeTruthy();
       expect(described.mechanism).toBeTruthy();
       expect(described.useWhen.length).toBeGreaterThan(20);
+    }
+  });
+});
+
+/**
+ * The regression these protect: associationState() used to answer "a transfer
+ * to this account right now fails with TOKEN_NOT_ASSOCIATED_TO_ACCOUNT"
+ * whenever no token relationship existed — without ever looking at HIP-23
+ * slots.
+ *
+ * For an account with a free slot that is simply false, and it contradicted
+ * selectStrategy() one field away in the same API response: that chose
+ * `auto-slot` and said the transfer would associate the token on arrival.
+ * Two opposite answers to the single question this template exists to answer.
+ *
+ * Nothing caught it because associationState had no tests at all.
+ */
+describe("associationState does not mistake 'not associated' for 'will fail'", () => {
+  /** Answers the mirror's /accounts/{id}/tokens lookup with `tokens`. */
+  const mirror = (tokens: Record<string, unknown>[]): { fetchImpl: typeof fetch } => ({
+    fetchImpl: (async () =>
+      ({
+        ok: true,
+        status: 200,
+        json: async () => ({ tokens }),
+      }) as Response) as typeof fetch,
+  });
+
+  const NONE = mirror([]);
+
+  it("an unlimited account is told the transfer succeeds, not that it fails", async () => {
+    const state = await associationState("0.0.10608004", "0.0.1183558", NONE, UNLIMITED_AUTO_SLOTS);
+    expect(state.associated).toBe(false);
+    expect(state.reason).toMatch(/unlimited automatic associations/i);
+    expect(state.reason).not.toMatch(/TOKEN_NOT_ASSOCIATED_TO_ACCOUNT/);
+  });
+
+  it("an account with free slots is told the transfer succeeds", async () => {
+    const state = await associationState("0.0.10608004", "0.0.1183558", NONE, 3);
+    expect(state.associated).toBe(false);
+    expect(state.reason).toMatch(/3 free automatic association slots/);
+    expect(state.reason).not.toMatch(/TOKEN_NOT_ASSOCIATED_TO_ACCOUNT/);
+  });
+
+  it("pluralises a single remaining slot", async () => {
+    const state = await associationState("0.0.10608004", "0.0.1183558", NONE, 1);
+    expect(state.reason).toMatch(/1 free automatic association slot\b/);
+    expect(state.reason).not.toMatch(/slots/);
+  });
+
+  it("an account with NO free slot is the only one told the transfer fails", async () => {
+    const state = await associationState("0.0.10608004", "0.0.1183558", NONE, 0);
+    expect(state.associated).toBe(false);
+    expect(state.reason).toMatch(/TOKEN_NOT_ASSOCIATED_TO_ACCOUNT/);
+  });
+
+  it("predicts nothing when the slot count was not read", async () => {
+    const state = await associationState("0.0.10608004", "0.0.1183558", NONE);
+    expect(state.associated).toBe(false);
+    // Silence beats a confident wrong answer: without the slot count the
+    // outcome genuinely is not knowable from this one request.
+    expect(state.reason).not.toMatch(/TOKEN_NOT_ASSOCIATED_TO_ACCOUNT/);
+    expect(state.reason).toMatch(/not read here/i);
+  });
+
+  it("an existing relationship still reports associated, whatever the slots say", async () => {
+    const held = mirror([{ token_id: "0.0.1183558", balance: 100, automatic_association: true, decimals: 6 }]);
+    const state = await associationState("0.0.10608004", "0.0.1183558", held, 0);
+    expect(state.associated).toBe(true);
+    expect(state.reason).toMatch(/HIP-23 slot/);
+  });
+
+  // The contradiction itself, asserted directly rather than by proxy.
+  it("never disagrees with selectStrategy about whether a transfer works", async () => {
+    for (const freeAutoSlots of [UNLIMITED_AUTO_SLOTS, 5, 1, 0]) {
+      const state = await associationState("0.0.10608004", "0.0.1183558", NONE, freeAutoSlots);
+      const choice = selectStrategy({
+        alreadyAssociated: state.associated,
+        freeAutoSlots,
+        recipientCanSign: true,
+        recipientHasHbarForFees: true,
+        senderControlsRecipient: false,
+        preferSingleApproval: true,
+        batchSupported: true,
+      });
+      const verdictSaysItFails = /TOKEN_NOT_ASSOCIATED_TO_ACCOUNT/.test(state.reason);
+      const strategyNeedsNoAction = choice.strategy === "auto-slot";
+      expect(verdictSaysItFails && strategyNeedsNoAction).toBe(false);
     }
   });
 });

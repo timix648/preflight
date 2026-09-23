@@ -81,6 +81,86 @@ documented system-Chrome fallback.
   [`.harness/acceptance-contract.json`](.harness/acceptance-contract.json).
 - Solidity flavour: **Hardhat**. Package manager: **Yarn** (vendored).
 
+## 4a. The five routes, and what to do on each
+
+### `/` — the credential-free argument
+
+Opens with the three-beat proof: the **same transfer** failing, the kit
+associating, then succeeding, 2.4 seconds apart, each linking to HashScan. The
+elapsed time is computed from the consensus timestamps at render, never
+hard-coded.
+
+Below it, everything is read live: the relay's undocumented `/config` limits,
+SaucerSwap's all-time swap count and TVL, and a histogram of how many decimal
+places each listed token uses — which is the argument for `units.ts` made from
+data rather than assertion.
+
+### `/diagnose` — paste any account, no wallet
+
+Four examples are one click away, and they are chosen to be different from one
+another rather than to flatter the tool:
+
+| Account | What it demonstrates |
+| --- | --- |
+| `0.0.2` | ED25519, long-zero address, ECRECOVER unsafe, zero slots |
+| `0.0.10608004` | ECDSA with a key-derived address and unlimited slots |
+| `0.0.10604882` | A **threshold key** — no single recovered address can speak for it |
+| `0.0.10622718` | Ceiling of 1, slot already used → **`0 free of 1`** |
+
+The last one is the interesting case, and the reason it is included is that the
+other three cannot show it: each has a ceiling equal to its free count, so a
+bug that reports the ceiling as availability is invisible against them.
+
+Every account also gets the four mechanisms judged against it, including the
+ones that do **not** apply and why. An EVM address works in the box too — it is
+resolved through the mirror node.
+
+### `/acquire` — quote without a wallet, sign only to execute
+
+The token picker, the decimals, the live router quote and the comparison
+against the published price feed all render before any wallet is connected.
+Only the two buttons that sign anything are gated.
+
+Step 2 stays **disabled until step 1 completes**. Calling the router before
+associating is the precise failure this template removes, so the UI does not
+merely advise against it.
+
+A quote is never displayed beside an amount it was not calculated for: change
+the figure and the previous answer is withheld, not relabelled. A swap reports
+success only once the **receipt** exists — "the wallet returned a hash" is not
+the same claim.
+
+### `/debug` — the scaffold's contract console, kept deliberately
+
+Ships with scaffold-hbar and is retained because `AssociationProbe`
+([`0.0.10620620`](https://hashscan.io/testnet/contract/0.0.10620620)) is worth
+poking at directly. Its read functions need no wallet:
+
+- `isLongZero(address)` — verified against the deployed contract with no
+  wallet connected:
+
+  | Input | Result | Resolves to |
+  | --- | --- | --- |
+  | `0x0000000000000000000000000000000000000002` | **`true`** | `0.0.2` |
+  | `0x574c17b6d34ffb8e2993645b32f773963fc77a53` | **`false`** | `0.0.10608004` |
+
+  The contract reaches the same judgement on-chain that `/diagnose` renders in
+  prose. Paste either address and press Read.
+- `recoverWithEcrecover(...)` — demonstrates the trap from inside the EVM
+  rather than from a description of it.
+
+The panel also lists the two system contracts this template calls: **HAS at
+`0x16a`** and **HTS at `0x167`**. `isAuthorized` lives on the former, not the
+latter — a confusion that produces code calling the wrong contract entirely.
+
+### `/blockexplorer` — honest about its own scope
+
+Scaffold's built-in explorer indexes a **local** chain. Pointed at testnet it
+says so and directs you to HashScan rather than rendering an empty page
+pretending to be an index. It is kept rather than deleted because removing
+scaffold conventions is a non-goal of this template, and because a page that
+states its own limits is more useful than one quietly returning nothing.
+
 ## 5. Architecture
 
 ```

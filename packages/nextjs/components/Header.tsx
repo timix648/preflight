@@ -99,7 +99,13 @@ export const Header = () => {
             {/* Two files rather than one with currentColor: next/image renders an
                 <img>, which does not inherit the surrounding text colour. */}
             <Image alt="Preflight" className="cursor-pointer dark:hidden" fill src="/preflight-mark.svg" />
-            <Image alt="" aria-hidden="true" className="cursor-pointer hidden dark:block" fill src="/preflight-mark-dark.svg" />
+            <Image
+              alt=""
+              aria-hidden="true"
+              className="cursor-pointer hidden dark:block"
+              fill
+              src="/preflight-mark-dark.svg"
+            />
           </div>
           <div className="flex flex-col">
             <span className="font-bold leading-tight text-base">Preflight</span>

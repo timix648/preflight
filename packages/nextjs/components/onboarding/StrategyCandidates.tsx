@@ -30,8 +30,8 @@ export const StrategyCandidates = ({ context }: { context: StrategyContext }) =>
         All four mechanisms, against this account
       </h3>
       <p className="text-sm opacity-70 mb-3">
-        Hedera shipped three protocol changes at the association problem and produced four ways to solve it. Here is
-        how each one fares for this specific account — including the ones that do not apply, and why.
+        Hedera shipped three protocol changes at the association problem and produced four ways to solve it. Here is how
+        each one fares for this specific account — including the ones that do not apply, and why.
       </p>
 
       <ul className="flex flex-col gap-2 list-none pl-0">
@@ -44,7 +44,11 @@ export const StrategyCandidates = ({ context }: { context: StrategyContext }) =>
             <li key={candidate.strategy}>
               <div
                 className={`card border-2 ${
-                  isChosen ? "border-primary bg-primary/5" : isBlocked ? "border-base-300 border-dashed" : "border-base-300"
+                  isChosen
+                    ? "border-primary bg-primary/5"
+                    : isBlocked
+                      ? "border-base-300 border-dashed"
+                      : "border-base-300"
                 }`}
               >
                 <div className="card-body p-3 gap-1">

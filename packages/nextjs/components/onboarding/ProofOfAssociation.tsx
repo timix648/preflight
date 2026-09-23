@@ -34,8 +34,8 @@ export const ProofOfAssociation = () => {
       </div>
       <p className="text-sm opacity-70 mb-4">
         Three real transactions on Hedera testnet, {elapsed} seconds apart, in consensus order. The only thing that
-        changed between the first and the last is that the kit associated the token. Every row links to HashScan —
-        check them rather than believing them.
+        changed between the first and the last is that the kit associated the token. Every row links to HashScan — check
+        them rather than believing them.
       </p>
 
       <ol className="flex flex-col gap-3 list-none pl-0">
@@ -61,9 +61,7 @@ export const ProofOfAssociation = () => {
                   </div>
 
                   <code
-                    className={`font-mono text-sm font-semibold break-all ${
-                      beat.ok ? "text-success" : "text-error"
-                    }`}
+                    className={`font-mono text-sm font-semibold break-all ${beat.ok ? "text-success" : "text-error"}`}
                   >
                     {beat.status}
                   </code>
@@ -91,12 +89,10 @@ export const ProofOfAssociation = () => {
       </ol>
 
       <p className="text-xs opacity-60 mt-3">
-        Token <code className="font-mono">{EVIDENCE_TOKEN.id}</code> ({EVIDENCE_TOKEN.symbol},{" "}
-        {EVIDENCE_TOKEN.decimals} decimals — deliberately not 8) sent from{" "}
-        <code className="font-mono">{EVIDENCE_ACCOUNTS.sender}</code> to{" "}
+        Token <code className="font-mono">{EVIDENCE_TOKEN.id}</code> ({EVIDENCE_TOKEN.symbol}, {EVIDENCE_TOKEN.decimals}{" "}
+        decimals — deliberately not 8) sent from <code className="font-mono">{EVIDENCE_ACCOUNTS.sender}</code> to{" "}
         <code className="font-mono">{EVIDENCE_ACCOUNTS.recipient}</code>, an account created with zero automatic
-        association slots. Ordered by consensus timestamp, not by transaction id — under concurrency those two
-        disagree.
+        association slots. Ordered by consensus timestamp, not by transaction id — under concurrency those two disagree.
       </p>
     </section>
   );

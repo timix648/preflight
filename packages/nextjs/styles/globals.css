@@ -916,28 +916,64 @@ main h2 {
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     @keyframes sd-rise {
-      from { opacity: 0; transform: translateY(2.2rem); }
-      to   { opacity: 1; transform: none; }
+      from {
+        opacity: 0;
+        transform: translateY(2.2rem);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
     }
     @keyframes sd-left {
-      from { opacity: 0; transform: translateX(-3.5rem); }
-      to   { opacity: 1; transform: none; }
+      from {
+        opacity: 0;
+        transform: translateX(-3.5rem);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
     }
     @keyframes sd-right {
-      from { opacity: 0; transform: translateX(3.5rem); }
-      to   { opacity: 1; transform: none; }
+      from {
+        opacity: 0;
+        transform: translateX(3.5rem);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
     }
     @keyframes sd-zoom-in {
-      from { opacity: 0; transform: scale(0.86); }
-      to   { opacity: 1; transform: scale(1); }
+      from {
+        opacity: 0;
+        transform: scale(0.86);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
     @keyframes sd-zoom-out {
-      from { opacity: 0; transform: scale(1.14); }
-      to   { opacity: 1; transform: scale(1); }
+      from {
+        opacity: 0;
+        transform: scale(1.14);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
     @keyframes sd-wipe {
-      from { opacity: 0; clip-path: inset(0 100% 0 0); }
-      to   { opacity: 1; clip-path: inset(0 0 0 0); }
+      from {
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+      }
+      to {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+      }
     }
 
     .sd-rise,
@@ -955,12 +991,24 @@ main h2 {
       animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
       animation-duration: 1ms; /* driven by scroll, not by the clock */
     }
-    .sd-rise     { animation-name: sd-rise; }
-    .sd-left     { animation-name: sd-left; }
-    .sd-right    { animation-name: sd-right; }
-    .sd-zoom-in  { animation-name: sd-zoom-in; }
-    .sd-zoom-out { animation-name: sd-zoom-out; }
-    .sd-wipe     { animation-name: sd-wipe; }
+    .sd-rise {
+      animation-name: sd-rise;
+    }
+    .sd-left {
+      animation-name: sd-left;
+    }
+    .sd-right {
+      animation-name: sd-right;
+    }
+    .sd-zoom-in {
+      animation-name: sd-zoom-in;
+    }
+    .sd-zoom-out {
+      animation-name: sd-zoom-out;
+    }
+    .sd-wipe {
+      animation-name: sd-wipe;
+    }
 
     /* Stagger children of a list or grid. */
     .sd-stagger > * {
@@ -971,10 +1019,18 @@ main h2 {
       animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
       animation-duration: 1ms;
     }
-    .sd-stagger > *:nth-child(2) { animation-range: entry 8% cover 42%; }
-    .sd-stagger > *:nth-child(3) { animation-range: entry 12% cover 46%; }
-    .sd-stagger > *:nth-child(4) { animation-range: entry 16% cover 50%; }
-    .sd-stagger > *:nth-child(n + 5) { animation-range: entry 20% cover 54%; }
+    .sd-stagger > *:nth-child(2) {
+      animation-range: entry 8% cover 42%;
+    }
+    .sd-stagger > *:nth-child(3) {
+      animation-range: entry 12% cover 46%;
+    }
+    .sd-stagger > *:nth-child(4) {
+      animation-range: entry 16% cover 50%;
+    }
+    .sd-stagger > *:nth-child(n + 5) {
+      animation-range: entry 20% cover 54%;
+    }
   }
 }
 
@@ -1072,8 +1128,12 @@ main:focus {
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     @keyframes bar-grow {
-      from { transform: scaleX(0); }
-      to   { transform: scaleX(1); }
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
     }
     .bar-grow {
       transform-origin: left center;
@@ -1090,4 +1150,64 @@ main:focus {
    carries the scale instead. */
 .bar-row {
   border-bottom: 1px solid var(--signal-line);
+}
+
+/* ===========================================================================
+   DEBUG-CONTRACTS THEME BRIDGE
+
+   @scaffold-hbar-ui/debug-contracts namespaces every colour it uses as
+   --color-sui-*, precisely so a host theme can supply them. This theme never
+   did, so they resolved to the package's own defaults and collided with the
+   surface underneath: the Read and Send buttons rendered WHITE text on
+   rgb(232,232,236), a contrast ratio of 1.22:1 where WCAG AA asks for 4.5.
+   The buttons were not pale, they were unreadable.
+
+   Mapping the namespace onto the Signal tokens fixes every control on
+   /debug at once — buttons, inputs, placeholders, skeletons — instead of
+   overriding rules one at a time and missing the ones nobody looked at.
+
+   These are :root so they follow the light/dark switch with everything else.
+   =========================================================================== */
+:root {
+  --color-sui-primary: var(--color-primary);
+  --color-sui-primary-content: var(--color-primary-content);
+  --color-sui-primary-subtle: var(--color-base-200);
+  --color-sui-primary-neutral: var(--color-base-300);
+  --color-sui-accent: var(--color-primary);
+  --color-sui-neutral: var(--color-base-300);
+  --color-sui-neutral-content: var(--color-base-content);
+  --color-sui-base-content: var(--color-base-content);
+
+  --color-sui-input-background: var(--color-base-100);
+  --color-sui-input-border: var(--color-base-300);
+  --color-sui-input-border-disabled: var(--color-base-200);
+  --color-sui-input-border-error: var(--color-error);
+  --color-sui-input-text: var(--color-base-content);
+  /* Placeholders are the one token that must NOT be base-content: they need
+     to read as absent rather than as a value. Still above 4.5:1. */
+  --color-sui-input-placeholder: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+
+  --color-sui-skeleton-base: var(--color-base-200);
+  --color-sui-skeleton-highlight: var(--color-base-300);
+}
+
+/* One token cannot satisfy both of these, which is why the bridge above is
+   not sufficient on its own:
+
+     .btn-dc-primary    background: --color-sui-primary         (blue)
+     .btn-dc-secondary  background: --color-sui-primary-subtle  (pale)
+
+   and BOTH take their text colour from --color-sui-primary-content. Set it
+   light and the secondary button is white on cream (measured 1.11:1); set it
+   dark and the primary button is near-black on blue. The package pairs one
+   foreground with two opposite surfaces, so the secondary variant needs its
+   own colour rather than a different token value. */
+.btn-dc-secondary {
+  color: var(--color-base-content);
+  border: 1px solid var(--color-base-300);
+}
+.btn-dc-secondary:disabled {
+  /* The package only drops opacity to .5, which on a pale button reads as
+     absent rather than as disabled. */
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
 }

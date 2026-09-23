@@ -3333,7 +3333,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@scaffold-hbar-ui/debug-contracts@npm:^2.0.0":
+"@scaffold-hbar-ui/debug-contracts@npm:2.0.0":
   version: 2.0.0
   resolution: "@scaffold-hbar-ui/debug-contracts@npm:2.0.0"
   dependencies:
@@ -3348,6 +3348,24 @@ __metadata:
     viem: ^2.23.0
     wagmi: ^2.14.11
   checksum: ccf765b5b4ea203f5d1665f54719e6c4e1992757f6cb611427a23bd56fc9ff8a0a56cf16e7c321e8538cef65d65958525e515d5a117a79ffec1ddc8812b3f2c7
+  languageName: node
+  linkType: hard
+
+"@scaffold-hbar-ui/debug-contracts@patch:@scaffold-hbar-ui/debug-contracts@npm%3A2.0.0#./.yarn/patches/@scaffold-hbar-ui-debug-contracts-npm-2.0.0-2254337e87.patch::locator=sh%40workspace%3A.":
+  version: 2.0.0
+  resolution: "@scaffold-hbar-ui/debug-contracts@patch:@scaffold-hbar-ui/debug-contracts@npm%3A2.0.0#./.yarn/patches/@scaffold-hbar-ui-debug-contracts-npm-2.0.0-2254337e87.patch::version=2.0.0&hash=1b9834&locator=sh%40workspace%3A."
+  dependencies:
+    "@heroicons/react": ^2.2.0
+    react-hot-toast: ^2.5.2
+  peerDependencies:
+    "@scaffold-hbar-ui/components": 2.0.0
+    "@scaffold-hbar-ui/hooks": 1.1.0
+    "@tanstack/react-query": ^5.59.15
+    "@types/react": ^19.0.7
+    react: ^19.2.3
+    viem: ^2.23.0
+    wagmi: ^2.14.11
+  checksum: 6c06ec702169aa3e87b985bac18ace3dbeacb08e1a45ebf3072ac68403a455054e9d7b2c585f324f21a0d75be88bb5abc6a4105003adb238a80db7a5f315be3e
   languageName: node
   linkType: hard
 

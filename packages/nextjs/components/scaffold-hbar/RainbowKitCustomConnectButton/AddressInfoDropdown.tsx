@@ -14,6 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-hbar";
 import { useCopyToClipboard, useOutsideClick } from "~~/hooks/scaffold-hbar";
+import { markWalletDismissed } from "~~/services/web3/stickyDisconnect";
 import { getTargetNetworks } from "~~/utils/scaffold-hbar";
 import { isENS } from "~~/utils/scaffold-hbar/common";
 
@@ -127,7 +128,11 @@ export const AddressInfoDropdown = ({
             <button
               className="menu-item text-error h-8 btn-sm rounded-xl! flex gap-3 py-3"
               type="button"
-              onClick={() => disconnect()}
+              onClick={() => {
+                // Record the dismissal BEFORE disconnecting — see stickyDisconnect.ts.
+                markWalletDismissed();
+                disconnect();
+              }}
             >
               <ArrowLeftStartOnRectangleIcon className="h-6 w-4 ml-2 sm:ml-0" /> <span>Disconnect</span>
             </button>

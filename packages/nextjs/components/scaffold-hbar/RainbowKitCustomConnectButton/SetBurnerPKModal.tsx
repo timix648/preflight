@@ -37,6 +37,8 @@ export const SetBurnerPKModal = () => {
         modalCheckboxRef.current.checked = false;
       }
 
+      // Not a dismissal: this disconnects only so the key just pasted takes
+      // effect on reconnect. Flagging it would stop the wallet coming back.
       disconnect();
     } catch (e) {
       const parsedError = getParsedError(e);

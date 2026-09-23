@@ -413,7 +413,9 @@ button.badge:hover {
   position: relative;
   isolation: isolate;
   background: var(--color-base-100);
-  padding-block: clamp(3rem, 6.5vw, 6.5rem);
+  /* Was clamp(3rem, 6.5vw, 6.5rem) — 89px top AND bottom at 1366px, which
+     pushed the first real content below the fold on a laptop. */
+  padding-block: clamp(2.25rem, 4vw, 4.5rem);
   border-bottom: 1px solid var(--signal-line);
 }
 .hedera-gradient::after {
@@ -438,7 +440,12 @@ button.badge:hover {
 }
 .hedera-gradient p {
   color: var(--signal-muted);
-  max-width: 48rem;
+  /* 56rem == Tailwind's max-w-4xl, which app/page.tsx sets on this paragraph.
+     Kept identical on purpose: this element selector outranks the utility
+     class, so a mismatch here silently overrides the JSX and the class in the
+     markup becomes a lie. It was 48rem against a max-w-4xl, and the paragraph
+     stopped 499px short of the container on a 1366px screen. */
+  max-width: 56rem;
 }
 .hedera-gradient p.text-lg {
   font-size: clamp(1rem, 1.4vw, 1.125rem);
@@ -485,7 +492,10 @@ main .max-w-5xl.py-10 {
   padding-top: 3.5rem;
   padding-bottom: 5rem;
 }
-main .max-w-5xl.py-10 > section + section {
+/* Matches the landing container. Kept in step with app/page.tsx: this was
+   .max-w-5xl until the page widened to 6xl, and a stale selector here silently
+   drops every section divider rather than erroring. */
+main .max-w-6xl.py-10 > section + section {
   border-top: 1px solid var(--signal-line);
   padding-top: 2.5rem;
 }

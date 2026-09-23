@@ -11,6 +11,7 @@ import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { LocalChainErrorBanner } from "~~/components/LocalChainErrorBanner";
+import { WalletReconnectGate } from "~~/components/WalletReconnectGate";
 import { BlockieAvatar } from "~~/components/scaffold-hbar";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
@@ -73,12 +74,16 @@ export const ScaffoldHbarAppWithProviders = ({ children }: { children: React.Rea
   const walletTheme = rainbowKitTheme(mounted && isDarkMode);
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    // reconnectOnMount={false} so nothing reconnects before WalletReconnectGate
+    // has checked whether the user pressed Disconnect. The gate then performs
+    // the reconnection wagmi would have done, when it is wanted.
+    <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
       <QueryClientProvider client={queryClient}>
         {/* Was #2299dd — a blue belonging to no palette in this project. */}
         <ProgressBar height="3px" color={mounted && isDarkMode ? "#8ba5ff" : "#0031ff"} />
         {/* No coolMode: it fires a confetti burst on every wallet connect,
             which undercuts a tool whose whole claim is that it is careful. */}
+        <WalletReconnectGate />
         <RainbowKitProvider avatar={BlockieAvatar} initialChain={hederaTestnet} theme={walletTheme}>
           <ScaffoldHbarApp>{children}</ScaffoldHbarApp>
         </RainbowKitProvider>

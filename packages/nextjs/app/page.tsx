@@ -35,12 +35,12 @@ const Home: NextPage = async () => {
       {/* The pitch, and the one sentence that explains the whole template  */}
       {/* ---------------------------------------------------------------- */}
       <section className="hedera-gradient dark:bg-none dark:bg-hedera-charcoal w-full px-5 py-12">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <p className="eyebrow text-white/70">Hedera testnet · run preflight before the transfer</p>
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
             Preflight<span className="accentuate text-white/80">.</span>
           </h1>
-          <p className="text-white/90 max-w-3xl text-lg leading-relaxed">
+          <p className="text-white/90 max-w-4xl text-lg leading-relaxed">
             Your users acquire and hold any Hedera token without ever hitting{" "}
             <code className="px-1 rounded bg-black/25 text-white">TOKEN_NOT_ASSOCIATED_TO_ACCOUNT</code>. Tokens are
             acquired on <strong>SaucerSwap</strong>, a live DEX on Hedera testnet, and the kit picks the right one of
@@ -60,7 +60,7 @@ const Home: NextPage = async () => {
         </div>
       </section>
 
-      <div className="max-w-5xl w-full mx-auto px-5 py-10 flex flex-col gap-10">
+      <div className="max-w-6xl w-full mx-auto px-5 py-10 flex flex-col gap-10">
         {/* -------------------------------------------------------------- */}
         {/* The proof. First, because it is the whole argument.             */}
         {/* Static, verified transactions — no network call, so it cannot   */}

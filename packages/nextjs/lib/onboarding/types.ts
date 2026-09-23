@@ -175,6 +175,15 @@ export interface RelayLimits {
   callDataSizeLimit: number;
   /** False on Hashio — there is no gasless path without self-hosting. */
   paymasterEnabled: boolean;
+  /**
+   * Whether the numbers above were actually read from the relay.
+   *
+   * False means /config could not be reached or did not carry the keys, and
+   * every value is a compiled-in observation. The UI must say so: presenting
+   * a constant as a live reading is the failure this whole template argues
+   * against.
+   */
+  live: boolean;
 }
 
 // =====================================================================

@@ -76,11 +76,24 @@ const Home: NextPage = async () => {
         <section className="sd-left">
           <div className="flex items-baseline justify-between flex-wrap gap-2 mb-1">
             <h2 className="text-xl font-bold">What this relay will actually let you do</h2>
-            {limits && <SourceBadge source="json-rpc" label={limits.version} />}
+            {limits?.live && <SourceBadge source="json-rpc" label={limits.version} />}
           </div>
+          {/* The badge and this sentence are gated on limits.live. If the relay
+              did not answer, these are compiled-in observations, and saying
+              otherwise would be the exact mistake this page is about. */}
           <p className="text-sm opacity-70 mb-4">
-            Read live from the relay&apos;s undocumented <code>/config</code> endpoint. None of these values appear in
-            the Hedera documentation, and several contradict what an Ethereum developer would assume.
+            {limits?.live ? (
+              <>
+                Read live from the relay&apos;s undocumented <code>/config</code> endpoint. None of these values appear
+                in the Hedera documentation, and several contradict what an Ethereum developer would assume.
+              </>
+            ) : (
+              <>
+                The relay&apos;s undocumented <code>/config</code> endpoint did not answer, so these are the values last
+                observed on Hashio testnet — <strong>not</strong> a live reading. They are shown because they are still
+                the right thing to design against, but do not quote them as current.
+              </>
+            )}
           </p>
 
           {limits ? (

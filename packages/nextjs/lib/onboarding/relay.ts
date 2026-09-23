@@ -32,8 +32,13 @@ import { OnboardingError, type RelayLimits } from "./types";
 export const RELAY_TESTNET = "https://testnet.hashio.io";
 export const RELAY_MAINNET = "https://mainnet.hashio.io";
 
-/** Values observed on Hashio testnet, used only when /config is unreachable. */
-const FALLBACK: Omit<RelayLimits, "version"> = {
+/**
+ * Values observed on Hashio testnet, used only when /config is unreachable.
+ *
+ * `live` is deliberately not part of this: provenance is a property of a
+ * particular read, not of the constants, and these are by definition not live.
+ */
+const FALLBACK: Omit<RelayLimits, "version" | "live"> = {
   chainId: 296,
   getLogsBlockRangeLimit: 1000,
   defaultRateLimit: 200,
@@ -77,6 +82,28 @@ export function configBoolean(value: unknown, fallback = false): boolean {
   return fallback;
 }
 
+/**
+ * Pull the settings map out of whatever shape the relay answers with.
+ *
+ * Hashio used to return the settings flat at the top level. Relay 0.78.5
+ * returns them nested:
+ *
+ *   { relay: { version: "0.78.5", config: { CHAIN_ID: "296", ... } },
+ *     upstreamDependencies: [...] }
+ *
+ * Reading the old shape against the new one yields `undefined` for every key,
+ * which this module would then quietly replace with its fallbacks — so the
+ * page would claim to be showing a live reading while showing constants. Both
+ * shapes are accepted so the template keeps working against self-hosted
+ * relays that have not been upgraded.
+ */
+export function unwrapConfig(body: unknown): Record<string, unknown> {
+  if (!body || typeof body !== "object") return {};
+  const nested = (body as { relay?: { config?: unknown } }).relay?.config;
+  if (nested && typeof nested === "object") return nested as Record<string, unknown>;
+  return body as Record<string, unknown>;
+}
+
 /** The raw /config map. 146 keys on Hashio testnet as of 18 Sep 2026. */
 export async function fetchRelayConfig(options: RelayOptions = {}): Promise<Record<string, unknown>> {
   const { baseUrl = RELAY_TESTNET, timeoutMs = 8_000, fetchImpl = fetch } = options;
@@ -97,7 +124,7 @@ export async function fetchRelayConfig(options: RelayOptions = {}): Promise<Reco
         status: response.status,
       });
     }
-    return (await response.json()) as Record<string, unknown>;
+    return unwrapConfig(await response.json());
   } catch (cause) {
     if (cause instanceof OnboardingError) throw cause;
     throw new OnboardingError(explain("RELAY_UNAVAILABLE"), cause);
@@ -147,8 +174,13 @@ export async function relayLimits(options: RelayOptions = {}): Promise<RelayLimi
     fetchRelayVersion(options),
   ]);
 
+  // "Live" means the relay actually handed us the keys. An empty map is what
+  // both a failed fetch and an unrecognised response shape look like here.
+  const live = config.CHAIN_ID !== undefined;
+
   return {
     version,
+    live,
     chainId: configNumber(config.CHAIN_ID, FALLBACK.chainId),
     getLogsBlockRangeLimit: configNumber(config.ETH_GET_LOGS_BLOCK_RANGE_LIMIT, FALLBACK.getLogsBlockRangeLimit),
     defaultRateLimit: configNumber(config.DEFAULT_RATE_LIMIT, FALLBACK.defaultRateLimit),

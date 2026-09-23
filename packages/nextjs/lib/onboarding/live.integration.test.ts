@@ -62,6 +62,11 @@ describe("JSON-RPC relay", () => {
     "reports testnet limits, with the paymaster correctly read as OFF",
     async () => {
       const limits = await relayLimits();
+      // FIRST, before any value is trusted. Every number below has a fallback
+      // identical to the real one, so this suite went on passing after relay
+      // 0.78.5 moved the whole settings map under `relay.config` and the
+      // reader started finding nothing. Assert that we actually read it.
+      expect(limits.live).toBe(true);
       expect(limits.chainId).toBe(296);
       expect(limits.getLogsBlockRangeLimit).toBeGreaterThan(0);
       // The assertion that justifies configBoolean: the API sends the STRING

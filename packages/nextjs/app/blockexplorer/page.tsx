@@ -7,6 +7,7 @@ import { Block, Transaction, TransactionReceipt } from "viem";
 import { hardhat } from "viem/chains";
 import { useFetchBlocks } from "~~/hooks/scaffold-hbar";
 import { useTargetNetwork } from "~~/hooks/scaffold-hbar/useTargetNetwork";
+import { EVIDENCE_ACCOUNTS, EVIDENCE_BEATS, EVIDENCE_TOKEN } from "~~/lib/onboarding/evidence";
 import { notification } from "~~/utils/scaffold-hbar";
 import { useAllContracts } from "~~/utils/scaffold-hbar/contractsData";
 
@@ -79,19 +80,95 @@ const BlockExplorer: NextPage = () => {
               block explorer is only for <code className="italic bg-base-300 text-base font-bold">localhost</code>.
             </p>
             {targetNetwork.blockExplorers?.default && (
-              <p>
-                You can use{" "}
+              <p className="mb-0">
+                Hedera is indexed by the mirror node, and{" "}
                 <a
-                  className="text-accent underline"
+                  className="text-primary underline"
                   href={targetNetwork.blockExplorers.default.url}
                   target="_blank"
                   rel="noreferrer"
                 >
                   {targetNetwork.blockExplorers.default.name}
                 </a>{" "}
-                instead.
+                is its explorer. This page cannot replace it: the scaffold explorer indexes a local chain by reading
+                blocks over RPC, and there is no local chain here.
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Rather than stop at "use something else", point at THIS project's
+            own artefacts. A route that only says what it cannot do is a wasted
+            one, and every link below is a fact a reader can check. */}
+        <div className="max-w-3xl mx-auto px-5">
+          <h2 className="text-lg font-bold mb-1">This project, on HashScan</h2>
+          <p className="text-sm opacity-70 mb-4">
+            Everything this template has put on testnet. Verifiable without running anything.
+          </p>
+
+          <div className="flex flex-col gap-4">
+            <div>
+              <h3 className="text-sm font-semibold mb-1.5">Contracts</h3>
+              <ul className="text-sm flex flex-col gap-1 m-0 pl-0 list-none">
+                {Object.entries(allContracts).map(([name, contract]) => (
+                  <li key={name} className="flex flex-wrap items-baseline gap-2">
+                    <a
+                      className="link link-hover font-mono text-primary"
+                      href={`https://hashscan.io/testnet/contract/${contract.address}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {name}
+                    </a>
+                    <span className="font-mono text-xs opacity-60">{contract.address}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-1.5">The three-beat proof</h3>
+              <p className="text-xs opacity-60 mb-2">
+                The same transfer failing, the kit associating, then succeeding. Token{" "}
+                <span className="font-mono">{EVIDENCE_TOKEN.id}</span>, {EVIDENCE_TOKEN.symbol}.
+              </p>
+              <ul className="text-sm flex flex-col gap-1 m-0 pl-0 list-none">
+                {EVIDENCE_BEATS.map(beat => (
+                  <li key={beat.transactionId} className="flex flex-wrap items-baseline gap-2">
+                    <a
+                      className="link link-hover font-mono text-xs text-primary break-all"
+                      href={`https://hashscan.io/testnet/transaction/${beat.transactionId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {beat.transactionId}
+                    </a>
+                    <span className={`text-xs font-mono ${beat.ok ? "text-success" : "text-error"}`}>
+                      {beat.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-1.5">Accounts</h3>
+              <ul className="text-sm flex flex-col gap-1 m-0 pl-0 list-none">
+                {Object.entries(EVIDENCE_ACCOUNTS).map(([role, id]) => (
+                  <li key={id} className="flex flex-wrap items-baseline gap-2">
+                    <a
+                      className="link link-hover font-mono text-primary"
+                      href={`https://hashscan.io/testnet/account/${id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {id}
+                    </a>
+                    <span className="text-xs opacity-60">{role}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </div>

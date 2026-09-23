@@ -76,3 +76,5 @@ Thumbs.db
 # Design and logo working files. Process artefacts, not part of the template:
 # a developer who scaffolds this should not receive 8MB of previews and zips.
 /design-handoff/
+.harness/spec.tier35.generated.yaml
+packages/hardhat/.env.tier35-stash

@@ -78,3 +78,9 @@ Thumbs.db
 /design-handoff/
 .harness/spec.tier35.generated.yaml
 packages/hardhat/.env.tier35-stash
+
+# Process artefacts, not part of the template. A developer who scaffolds this
+# should receive the product, not the notes we wrote while building it.
+# Both still exist locally; they are simply not shipped.
+/WALKTHROUGH.md
+/HANDOVER.md

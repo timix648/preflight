@@ -11,31 +11,31 @@
   "commands": [
     {
       "name": "install",
-      "command": "yarn install",
+      "command": "node .yarn/releases/yarn-3.2.3.cjs install",
       "timeoutMs": 420000,
       "purpose": "Install workspace dependencies. Plain install, no --no-immutable: the committed lockfile is in sync, so this matches what CI does."
     },
     {
       "name": "lint",
-      "command": "yarn lint",
+      "command": "node .yarn/releases/yarn-3.2.3.cjs lint",
       "timeoutMs": 300000,
       "purpose": "ESLint across both workspaces. Must report zero errors."
     },
     {
       "name": "test",
-      "command": "yarn next:test",
+      "command": "node .yarn/releases/yarn-3.2.3.cjs next:test",
       "timeoutMs": 180000,
       "purpose": "56 unit tests over the framework-free core. Offline and hermetic — the live-endpoint suite is deliberately separate so this never fails because testnet was slow."
     },
     {
       "name": "contract-test",
-      "command": "yarn hardhat:test:ci",
+      "command": "node .yarn/releases/yarn-3.2.3.cjs hardhat:test:ci",
       "timeoutMs": 300000,
       "purpose": "17 contract tests, weighted toward revert paths. Uses test:ci, which runs WITHOUT HEDERA_FORKING: the default hardhat:test script enables the Hedera forking plugin, which makes these local tests fetch network state and time out under load. The tests were written to be environment-independent (see NOTES-failures.md #11), so forking buys nothing here and costs determinism."
     },
     {
       "name": "build",
-      "command": "yarn next:build",
+      "command": "node .yarn/releases/yarn-3.2.3.cjs next:build",
       "timeoutMs": 600000,
       "purpose": "Production build, which also type-checks. Gate item G5."
     }

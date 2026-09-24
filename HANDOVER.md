@@ -116,7 +116,7 @@ All four passed as of 20 September 2026.
 | --- | --- | --- |
 | 1 | **README create command** says `<org>/preflight`. The GitHub repo must be created with **exactly** that name or gate item G1 fails. | the org name |
 | 2 | **Logo** — `preflight-mark.svg` and `-dark.svg` are placeholders (concept 03). The approved flowing check-arrow needs exporting from the design tool. | design export |
-| 3 | **Demo video** — not started. Highest-value remaining item: a panel watches 90 seconds before reading 3,000 words, and the fail → associate → succeed sequence is already captured. | anyone |
+| 3 | **Demo video** — not started. Highest-value remaining item. The brief names "the demo recording" as a deliverable but states **no required length**, so pick one that suits the material; the fail → associate → succeed sequence is already captured. | anyone |
 | 4 | **`/acquire` end-to-end evidence** — a real swap signed in a browser with a funded wallet. `EVIDENCE.md` lists it as outstanding. | a funded wallet |
 | 5 | **Harness Tier 3.5** — more than the two env vars this row used to claim. `chainValidation` only executes under `validate-semantic`; plain `validate` never reaches it. That path also requires `validator.enabled: true` and `spec.contract` — absent here — and runs the agent, which is billed. The operator vars are necessary but nowhere near sufficient. | a decision about scope and cost |
 | 6 | **Debug Contracts** and the wallet modal have had no visual pass under the new theme. | anyone |

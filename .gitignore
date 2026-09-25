@@ -84,3 +84,13 @@ packages/hardhat/.env.tier35-stash
 # Both still exist locally; they are simply not shipped.
 /WALKTHROUGH.md
 /HANDOVER.md
+
+# Local demo production material. Keep app code, evidence-generation scripts,
+# EVIDENCE.md, and harness validators in the shipped template.
+/demo/
+/bounty-demo/
+/demo-script.*
+/DEMO-SCRIPT.*
+/demo-storyboard.*
+/recordings/
+/video-exports/

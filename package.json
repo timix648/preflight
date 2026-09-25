@@ -40,6 +40,7 @@
     "precommit": "lint-staged",
     "lint-staged": "lint-staged",
     "next:test": "yarn workspace @sh/nextjs test",
+    "test:browser": "node scripts/acquire-browser.cjs",
     "test": "yarn next:test && yarn hardhat:test",
     "hardhat:verify:sourcify": "yarn workspace @sh/hardhat verify:sourcify",
     "hardhat:evidence": "yarn workspace @sh/hardhat evidence",

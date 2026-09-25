@@ -6,7 +6,7 @@
  *
  * Everything below is framework-free: no React, no Next.js, no wagmi. It runs
  * from a route handler, a script, a test, or another framework entirely. React
- * hooks that wrap this core live in hooks/onboarding/.
+ * Server Components and API route handlers consume this core directly.
  *
  * The eight traps, and where each is handled:
  *

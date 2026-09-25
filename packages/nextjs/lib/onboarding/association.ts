@@ -7,7 +7,7 @@
  *   explicit    TokenAssociateTransaction    recipient pays, 2 approvals
  *   auto-slot   HIP-23 maxAutomaticTokenAssociations, -1 unlimited
  *   airdrop     HIP-904 TokenAirdropTransaction, SENDER pays
- *   batch       HIP-551 atomic associate + transfer, 1 approval
+ *   batch       HIP-551 atomic associate + transfer, one atomic submission
  *
  * What does not exist anywhere is guidance on which to use when. That
  * decision is this module, and it is deliberately split in two:
@@ -67,7 +67,7 @@ export interface StrategySelection {
   reason: string;
   /** Who pays the association fee under this strategy. */
   paidBy: "recipient" | "sender" | "nobody";
-  /** How many signatures the recipient must produce. */
+  /** Logical approval steps; native batch signatures and wallet prompts may be greater. */
   recipientApprovals: number;
   /** Strategies that would also have worked, cheapest-first. */
   alternatives: AssociationStrategy[];
@@ -82,7 +82,7 @@ export interface StrategySelection {
  *   1. already associated        no transaction at all
  *   2. free auto-slot            no extra approval; the transfer just works
  *   3. sender controls recipient set slots once, then every future token is free
- *   4. batch                     one approval instead of two
+ *   4. batch                     one atomic submission; wallet signing prompts may vary
  *   5. explicit                  the baseline everybody knows
  *   6. airdrop                   recipient cannot act; the sender pays instead
  */
@@ -123,7 +123,7 @@ export function selectStrategy(context: StrategyContext): StrategySelection {
     };
   }
 
-  if (senderControlsRecipient && recipientCanSign) {
+  if (senderControlsRecipient && recipientCanSign && recipientHasHbarForFees) {
     return {
       strategy: "auto-slot",
       reason:
@@ -140,7 +140,7 @@ export function selectStrategy(context: StrategyContext): StrategySelection {
     return {
       strategy: "batch",
       reason:
-        "The recipient can sign and pay, so the kit batches the association and the transfer into one atomic transaction (HIP-551) — one approval instead of two, and no window in which the token is associated but not delivered.",
+        "The recipient can sign and pay, so the kit batches the association and the transfer into one atomic transaction (HIP-551) — one atomic submission; wallet signing prompts may vary, and no window in which the token is associated but not delivered.",
       paidBy: "recipient",
       recipientApprovals: 1,
       alternatives: buildAlternatives(context, "batch"),
@@ -213,7 +213,7 @@ export function evaluateStrategies(context: StrategyContext): StrategyEvaluation
   const chosen = selectStrategy(context).strategy;
   const canPay = context.recipientCanSign && context.recipientHasHbarForFees;
   const hasFreeSlot = context.freeAutoSlots === UNLIMITED_AUTO_SLOTS || context.freeAutoSlots > 0;
-  const canRaiseSlots = context.senderControlsRecipient && context.recipientCanSign;
+  const canRaiseSlots = context.senderControlsRecipient && context.recipientCanSign && context.recipientHasHbarForFees;
 
   const build = (
     strategy: AssociationStrategy,
@@ -240,13 +240,15 @@ export function evaluateStrategies(context: StrategyContext): StrategyEvaluation
           ? "The recipient accepts unlimited automatic associations, so the transfer associates on arrival."
           : `The recipient has ${context.freeAutoSlots} free slot${context.freeAutoSlots === 1 ? "" : "s"}, consumed on arrival.`
         : "No free slots, but the sender controls this account and can raise the limit once.",
-      "The recipient has no free automatic slots and the sender cannot raise the limit on an account it does not control.",
+      context.senderControlsRecipient && context.recipientCanSign && !context.recipientHasHbarForFees
+        ? "The recipient has no free slots and no HBAR to pay for raising its limit. The sender can use an airdrop instead."
+        : "The recipient has no free automatic slots and the sender cannot raise the limit on an account it does not control.",
     ),
     build(
       "batch",
       canPay && context.batchSupported,
       1,
-      "The recipient can sign and pay, so associate and transfer fit in one atomic transaction — one approval, and no window where the token is associated but undelivered.",
+      "The recipient can sign and pay, so associate and transfer fit in one atomic transaction — wallet signing prompts may vary, with no window where the token is associated but undelivered.",
       !context.batchSupported
         ? "Batching is unavailable: the installed SDK or the target network does not support HIP-551."
         : !context.recipientCanSign
@@ -264,9 +266,9 @@ export function evaluateStrategies(context: StrategyContext): StrategyEvaluation
     ),
     build(
       "airdrop",
-      true, // always works: it asks nothing of the recipient
+      true, // pending creation asks nothing of the recipient; token rules still apply
       0,
-      "Always available. The sender pays and the token sits pending until the recipient claims it — so it works even for an account that cannot sign and holds no HBAR.",
+      "The sender pays for delivery or a pending airdrop. Creating the pending entry needs no recipient signature or HBAR; claiming it later requires recipient authorization and a funded payer. Token restrictions still apply.",
       "",
     ),
   ];
@@ -282,7 +284,7 @@ function buildAlternatives(context: StrategyContext, chosen: AssociationStrategy
   }
   if (canPay && context.batchSupported) viable.push("batch");
   if (canPay) viable.push("explicit");
-  // The airdrop path always works: it needs nothing from the recipient.
+  // Pending creation needs no recipient signature; token rules still apply.
   viable.push("airdrop");
 
   return viable.filter(strategy => strategy !== chosen);
@@ -364,7 +366,7 @@ export async function associationState(
 export interface AssociationExecutor {
   /**
    * Execute a built transaction and return its receipt details.
-   * Implementations live outside lib/ — see hooks/onboarding/.
+   * The native implementation is createHieroAssociationExecutor in sdk-executor.ts.
    */
   execute(request: AssociationRequest): Promise<AssociationReceipt>;
   /** True when the installed SDK and target network support HIP-551 batching. */
@@ -424,13 +426,22 @@ export async function ensureAssociated(params: {
         recipientApprovals: 1,
         alternatives: [],
       }
-    : selectStrategy({ ...context, batchSupported: executor.supportsBatch() });
+    : selectStrategy({ ...context, batchSupported: context.batchSupported && executor.supportsBatch() });
 
   if (selection.strategy === "none") {
-    return { associated: true, reason: selection.reason };
+    return { associated: true, readyToReceive: true, reason: selection.reason };
+  }
+
+  // An existing slot needs no account update (and no signature). It is not an
+  // association until delivery; callers that require a relationship must use explicit.
+  if (selection.strategy === "auto-slot" && context.freeAutoSlots !== 0) {
+    return { associated: false, readyToReceive: true, strategyUsed: "auto-slot", reason: selection.reason };
   }
 
   try {
+    if (selection.strategy === "batch" && (!context.batchSupported || !executor.supportsBatch())) {
+      throw new Error("BATCH_UNAVAILABLE");
+    }
     const receipt = await executor.execute({
       strategy: selection.strategy,
       accountId,
@@ -440,11 +451,14 @@ export async function ensureAssociated(params: {
       maxAutomaticTokenAssociations: selection.strategy === "auto-slot" ? UNLIMITED_AUTO_SLOTS : undefined,
     });
 
+    if (receipt.status !== "SUCCESS") throw new Error(receipt.status);
+
     return {
       // A pending airdrop is NOT an association yet: the recipient still has to
       // claim it. Reporting it as associated would be the same lie every other
       // integration tells, one layer down.
-      associated: !receipt.pending,
+      associated: selection.strategy !== "auto-slot" && !receipt.pending,
+      readyToReceive: !receipt.pending,
       strategyUsed: selection.strategy,
       reason: receipt.pending
         ? `${selection.reason} The recipient has no free slot, so it is waiting as a pending airdrop until they claim it.`
@@ -454,10 +468,11 @@ export async function ensureAssociated(params: {
     };
   } catch (cause) {
     // Already associated is success, not failure — a race with another caller.
-    const explanation = explain(cause);
-    if (explanation.code === "TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT") {
+    const explanation = cause instanceof OnboardingError ? cause.explanation : explain(cause);
+    if (selection.strategy === "explicit" && explanation.code === "TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT") {
       return {
         associated: true,
+        readyToReceive: true,
         reason:
           "Already associated by the time the transaction landed — another caller got there first. Treated as success.",
       };

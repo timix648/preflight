@@ -1,6 +1,7 @@
 /* SIGNAL / Hedera Token Onboarding Kit
  * DaisyUI 5 + Tailwind 4. Drop-in theme; existing React markup is preserved.
  */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
 @import "tailwindcss";
 /* Open-source Latin font subsets; see FONT-LICENSES. */
 @font-face {
@@ -844,8 +845,6 @@ main .card-body [title^="Trap"] .truncate {
    credential-free first journey. Wrapped in @supports so browsers without it
    simply render the content, unanimated and complete.
    =========================================================================== */
-
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
 
 /* ---- warm the base -------------------------------------------------------- */
 [data-theme="light"] {

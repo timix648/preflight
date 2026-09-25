@@ -25,13 +25,13 @@
       "name": "test",
       "command": "node .yarn/releases/yarn-3.2.3.cjs next:test",
       "timeoutMs": 180000,
-      "purpose": "56 unit tests over the framework-free core. Offline and hermetic — the live-endpoint suite is deliberately separate so this never fails because testnet was slow."
+      "purpose": "Core, native SDK transaction, and submission-guard regression tests. Network submission is mocked; live endpoint tests run separately."
     },
     {
       "name": "contract-test",
       "command": "node .yarn/releases/yarn-3.2.3.cjs hardhat:test:ci",
       "timeoutMs": 300000,
-      "purpose": "17 contract tests, weighted toward revert paths. Uses test:ci, which runs WITHOUT HEDERA_FORKING: the default hardhat:test script enables the Hedera forking plugin, which makes these local tests fetch network state and time out under load. The tests were written to be environment-independent (see NOTES-failures.md #11), so forking buys nothing here and costs determinism."
+      "purpose": "17 contract tests, weighted toward revert paths. Both test and test:ci now run without the Hedera forking plugin. Use the explicit workspace test:fork command for network-dependent checks."
     },
     {
       "name": "build",

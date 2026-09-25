@@ -36,7 +36,7 @@ consistency, status codes, and undocumented relay limits.
 ## 1. Create a project from this template
 
 ```bash
-npm create scaffold-hbar@latest -- --template <org>/preflight
+npm create scaffold-hbar@latest -- --template timix648/preflight
 ```
 
 **The `--` is required.** Without it, `npm create` consumes `--template` itself
@@ -62,8 +62,8 @@ README makes and the exact way to falsify it.
 | ED25519 accounts are unusable with EVM tooling           | `/diagnose?account=0.0.2` → long-zero address, ECRECOVER **not** compatible, and the reason: it returns a _different valid-looking_ address rather than failing.                                                                                                                                                      |
 | Quotes come from the router, not a price feed            | `/acquire`, pick SAUCE, enter 1. The panel shows the router figure, the published feed figure, and the divergence between them — measured above 10% at times.                                                                                                                                                         |
 | The association actually happened                        | Every transaction in [`EVIDENCE.md`](EVIDENCE.md) links to HashScan. The [failing transfer](https://hashscan.io/testnet/transaction/0.0.10505627-1789836087-477565839) carries **zero** token transfers; the [one 2.4s later](https://hashscan.io/testnet/transaction/0.0.10505627-1789836090-275408686) moves 100.   |
-| The tests are real                                       | `yarn test` — 144 unit + 17 contract, offline. `yarn workspace @sh/nextjs test:live` — 14 against live testnet.                                                                                                                                                                                                       |
-| It passes the bounty's own gate                          | `yarn harness:validate` → `passed=true`, 0 findings, 7/7 routes.                                                                                                                                                                                                                                                      |
+| The tests are real                                       | `yarn test` — core and contract regressions, offline. `yarn workspace @sh/nextjs test:live` — 14 against live testnet.                                                                                                                                                                                                       |
+| It passes the bounty's own gate                          | Previous recorded run: `passed=true`, 0 findings, 7/7 routes. Re-run `yarn harness:validate` for your checkout.                                                                                                                                                                                                                                                      |
 
 ### Two honest caveats about running the gate yourself
 
@@ -94,10 +94,10 @@ documented system-Chrome fallback.
 - **A live SaucerSwap integration** — token list, prices, decimals, liveness,
   and real router quotes, all read without credentials. The full journey is
   quote → associate → swap, in that order, against verified deployments.
-- **175 tests.** 144 unit and 17 contract revert-path tests that run offline,
+- **Regression suites.** Core and native SDK tests plus 17 contract tests that run offline,
   plus 14 live-endpoint tests kept in a separate suite so a slow testnet can
   never fail the ordinary run.
-- **A green harness gate.** `yarn harness:validate` passes Tiers 0–2 —
+- **A recorded harness gate.** The earlier `yarn harness:validate` run passed Tiers 0–2 —
   `passed=true`, 0 findings, 7/7 routes walked in a real browser with no
   console errors. An acceptance contract for Tier 3 ships in
   [`.harness/acceptance-contract.json`](.harness/acceptance-contract.json).
@@ -435,7 +435,7 @@ the first thing most developers hit on Hedera.
 | 1    | Explicit `TokenAssociateTransaction`                                                                                                                                                                                                                                                                                                                                 | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836088-273241870)                                                                                                                                                                                  |
 | 2    | HIP-23 auto-slot, **zero approvals**                                                                                                                                                                                                                                                                                                                                 | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836092-919819020)                                                                                                                                                                                  |
 | 3    | HIP-904 airdrop — [send](https://hashscan.io/testnet/transaction/0.0.10505627-1789836095-256339668) · [claim](https://hashscan.io/testnet/transaction/0.0.10505627-1789836093-628534669) · [reject](https://hashscan.io/testnet/transaction/0.0.10505627-1789836096-561225275) · [cancel](https://hashscan.io/testnet/transaction/0.0.10505627-1789836099-666004205) | 4 transactions                                                                                                                                                                                                                                                   |
-| 4    | HIP-551 atomic batch, **one approval**                                                                                                                                                                                                                                                                                                                               | [batch](https://hashscan.io/testnet/transaction/0.0.10505627-1789836958-700023220) + [inner 1](https://hashscan.io/testnet/transaction/0.0.10620973-1789836958-708578860) + [inner 2](https://hashscan.io/testnet/transaction/0.0.10505627-1789836957-767192698) |
+| 4    | HIP-551 atomic batch, **one atomic submission**                                                                                                                                                                                                                                                                                                                               | [batch](https://hashscan.io/testnet/transaction/0.0.10505627-1789836958-700023220) + [inner 1](https://hashscan.io/testnet/transaction/0.0.10620973-1789836958-708578860) + [inner 2](https://hashscan.io/testnet/transaction/0.0.10505627-1789836957-767192698) |
 
 The airdrop and its claim are worth reading together: the **airdrop moves
 nothing**, and the **claim** is what transfers the tokens. That is HIP-904's
@@ -578,11 +578,75 @@ in the library, so nothing breaks.
 
 ## 15. Testing
 
+### Native SDK execution and the EVM wallet flow
+
+The four-strategy API is `ensureAssociated()` with the supplied
+`createHieroAssociationExecutor()` adapter. Import the adapter directly from
+`lib/onboarding/sdk-executor`; it is intentionally absent from the shared barrel
+so the Hiero SDK does not enlarge the credential-free pages or EVM wallet bundle.
+
+```ts
+import { ensureAssociated } from "./lib/onboarding/association";
+import { createHieroAssociationExecutor } from "./lib/onboarding/sdk-executor";
+
+// client, signTransaction, batchPublicKey and currentContext come from your
+// application's signer integration and freshly read account state.
+const executor = createHieroAssociationExecutor({
+  client,
+  sign: signTransaction,
+  batch: { supported: true, key: batchPublicKey },
+});
+const result = await ensureAssociated({
+  accountId: recipientId,
+  tokenId,
+  senderId,
+  amount: tokenAmountInSmallestUnits, // bigint, never a floating-point number
+  context: currentContext,
+  executor,
+});
+```
+
+The signing callback receives a frozen SDK transaction and `{ accounts,
+batchKey? }`. It must obtain all listed account signatures and, on the outer
+batch, the batch-key signature, then return the signed transaction. It can use
+your wallet or signing service; this adapter reads no environment variables and
+stores no keys. Configure a query payer on the SDK client for the airdrop record
+query. Set `batch.supported` only for a network where native HIP-551 is available.
+
+| Mechanism | What the adapter executes | Result |
+| --- | --- | --- |
+| Explicit | Recipient-paid `TokenAssociateTransaction` | Associated; delivery remains the caller's next operation |
+| Auto-slot | No transaction for an existing slot; otherwise recipient-paid `AccountUpdateTransaction` | `readyToReceive: true`, `associated: false` until delivery |
+| Airdrop | Sender-paid `TokenAirdropTransaction` | The transaction record determines whether delivery is pending |
+| Batch | Recipient-paid native association + transfer in `BatchTransaction`; sender also signs the transfer | Atomic delivery, or an error; no smart-contract calls inside the batch |
+
+`executor.claim()` accepts a pending airdrop as the recipient. `executor.cancel()`
+withdraws it as the sender. `executor.reject()` returns a **held** token; it does
+not decline a pending airdrop. A recipient without HBAR needs a funded payer
+arrangement before claiming; sender-paid airdrop creation does not make a later
+claim free. Batch signing can require several wallet prompts depending on your
+signer; atomicity does not guarantee one prompt in every wallet.
+
+`/acquire` deliberately uses explicit association followed by a standalone
+SaucerSwap call through an EVM wallet. Its displayed strategy describes that
+actual execution. Native SDK airdrops and transfers are separate integration
+paths, not choices silently substituted into a DEX swap. [Hedera's September 22
+notice](https://hedera.com/blog/atomic-batch-transactions-no-longer-support-smart-contract-calls/)
+keeps native batches supported while deprecating contract calls inside batches.
+
+The swap guard requires a matching account/token/network profile and a quote
+less than 30 seconds old for the current amount. A pending transaction prevents
+duplicate submissions. The UI checks receipt status, then re-reads association
+from the mirror node before enabling the router.
+
+### Run the checks
+
 ```bash
-yarn test          # 144 unit + 17 contract tests. Offline.
-yarn next:test     # 144 unit only
+yarn test          # core, native SDK, and contract tests; no transaction broadcasts
+yarn next:test     # core and native SDK regressions
 yarn hardhat:test  # 17 contract only
 yarn workspace @sh/nextjs test:live   # 14 live-endpoint tests, hits real testnet
+yarn test:browser  # actual AcquireFlow in Chromium; mocked wallet and API boundaries
 
 yarn harness:validate   # the bounty's own gate: static + commands + route walk
 ```

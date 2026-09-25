@@ -83,7 +83,9 @@ describe("a free automatic slot costs the user nothing", () => {
 
 describe("when the sender controls the recipient, fix it permanently", () => {
   it("raises the slot limit once instead of associating per token", () => {
-    const result = selectStrategy(ctx({ senderControlsRecipient: true, recipientCanSign: true }));
+    const result = selectStrategy(
+      ctx({ senderControlsRecipient: true, recipientCanSign: true, recipientHasHbarForFees: true }),
+    );
     expect(result.strategy).toBe("auto-slot");
     expect(result.recipientApprovals).toBe(1);
     expect(result.reason).toContain("Every future token");
@@ -219,9 +221,7 @@ describe("invariants that must hold for every possible context", () => {
       // A free slot is already paid for; only new spending is in question.
       if (hasSlot || context.recipientHasHbarForFees) continue;
       const result = selectStrategy(context);
-      if (result.strategy !== "auto-slot") {
-        expect(result.paidBy).toBe("sender");
-      }
+      expect(result.paidBy).toBe("sender");
     }
   });
 

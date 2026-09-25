@@ -1,0 +1,39 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install from the committed lockfile
+        run: node .yarn/releases/yarn-3.2.3.cjs install --immutable
+      - name: Lint both workspaces
+        run: node .yarn/releases/yarn-3.2.3.cjs lint
+      - name: Core and transaction regression tests
+        run: node .yarn/releases/yarn-3.2.3.cjs next:test
+      - name: Contract tests
+        run: node .yarn/releases/yarn-3.2.3.cjs hardhat:test:ci
+      - name: Install the test browser
+        run: node .yarn/releases/yarn-3.2.3.cjs exec playwright install --with-deps chromium
+      - name: Acquire browser regressions
+        run: node .yarn/releases/yarn-3.2.3.cjs test:browser
+      - name: Production build and type checking
+        run: node .yarn/releases/yarn-3.2.3.cjs next:build

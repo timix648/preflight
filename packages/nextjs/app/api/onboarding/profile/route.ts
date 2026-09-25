@@ -50,13 +50,27 @@ export async function GET(request: Request) {
       recipientHasHbarForFees: hasHbar,
       senderControlsRecipient: false,
       preferSingleApproval: true,
-      batchSupported: true,
+      batchSupported: false,
     });
+
+    // This route serves an EVM wallet calling SaucerSwap. Its execution path
+    // explicitly associates before the router; native SDK transfer/airdrop
+    // recommendations belong to /diagnose and the reusable SDK adapter.
+    const executionSelection = association?.associated
+      ? selection
+      : {
+          strategy: "explicit" as const,
+          reason:
+            "This EVM wallet flow explicitly associates the output token before calling SaucerSwap. Confirm the association, then confirm the swap. Native transfers can use the other mechanisms through the SDK adapter.",
+          paidBy: "recipient" as const,
+          recipientApprovals: 2,
+          alternatives: [],
+        };
 
     return NextResponse.json({
       profile,
       association,
-      selection,
+      selection: executionSelection,
       // bigint is not JSON-serialisable; send the display string instead.
       hbar: balance
         ? { tinybar: (balance.value as bigint).toString(), source: balance.source, asOf: balance.asOf }

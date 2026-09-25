@@ -20,7 +20,8 @@
  */
 import { type MirrorOptions, getAccount, getTokenRelationship } from "./mirror";
 import { RELAY_TESTNET, type RelayOptions } from "./relay";
-import type { Reading } from "./types";
+import { explain } from "./status";
+import { OnboardingError, type Reading } from "./types";
 import { type Tinybar, type TokenUnits, tokenUnits, weibar, weibarToTinybar } from "./units";
 
 /** A reading from each source, plus whether they agree. */
@@ -63,11 +64,15 @@ export async function readHbarFromRpc(evmAddress: string, options: RelayOptions 
       }),
     });
 
-    const body = (await response.json()) as { result?: string };
+    if (!response.ok) throw new Error(`Relay HTTP ${response.status}`);
+    const body = (await response.json()) as { result?: unknown; error?: unknown };
+    if (body.error || typeof body.result !== "string" || !/^0x[0-9a-f]+$/i.test(body.result)) {
+      throw new Error("Relay did not return a valid balance");
+    }
     // eth_getBalance returns weibar (18dp). Converting to tinybar is lossy by
     // construction, so the remainder is discarded deliberately here: sub-tinybar
     // dust cannot exist on Hedera and only appears through this conversion.
-    const raw = BigInt(body.result ?? "0x0");
+    const raw = BigInt(body.result);
     const { value } = weibarToTinybar(weibar(raw));
 
     return {
@@ -76,6 +81,8 @@ export async function readHbarFromRpc(evmAddress: string, options: RelayOptions 
       asOf: Math.floor(Date.now() / 1000),
       mayBeStale: false, // live consensus state
     };
+  } catch (cause) {
+    throw new OnboardingError(explain("RELAY_UNAVAILABLE"), cause);
   } finally {
     clearTimeout(timer);
   }

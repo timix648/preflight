@@ -42,7 +42,7 @@ validators:
 # NOT reachable with `hedera-harness validate`. validateWorkspace calls
 # runDeterministicValidation, which never touches chainValidation; only
 # validateSemanticWorkspace (`validate-semantic`) provisions a chain signer.
-# That path also requires validator.enabled: true and spec.contract, neither of
+# That path also requires validator.enabled: true and spec.contract, both of
 # which this spec sets, and it runs the agent — a billed operation. Setting the
 # two env vars alone changes nothing, silently.
 #

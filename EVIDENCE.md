@@ -201,12 +201,15 @@ answers by putting the cost on the sender.
 
 ## Still outstanding
 
-Nothing on-chain. All four association mechanisms and the full browser journey
-are captured above.
+All four association mechanisms and the earlier browser journey are captured
+above. These transactions predate the reusable SDK executor added on September
+25; they prove the mechanisms, not a live run of that new adapter. Its offline
+tests serialize real SDK transactions and mock only network submission.
 
-What remains is publication, not evidence:
+Remaining release validation:
 
 | What it needs | Blocked on |
 | --- | --- |
 | Clean-machine `npm create scaffold-hbar` check (gate item G1) | The repository being public |
-| Harness Tier 3.5 chain validation | Tier 3 semantic validation, which needs `validator.enabled`, `spec.contract` and a billed agent run — not merely the operator env vars |
+| Fresh live execution through the reusable SDK adapter | A caller-supplied funded testnet signer; record new transaction ids rather than relabelling the historical evidence |
+| Optional Harness Tier 3.5 chain validation | The spec has `validator.enabled` and `contract`; a billed semantic agent run and funded signer are still required |

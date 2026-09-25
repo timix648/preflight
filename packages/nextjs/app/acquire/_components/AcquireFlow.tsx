@@ -14,6 +14,13 @@ import {
   hbarToWeibar,
   toEvmAddress,
 } from "~~/lib/onboarding";
+import {
+  type AcquisitionContext,
+  type QuoteContext,
+  canSubmitSwap,
+  currentQuote,
+  sameAcquisition,
+} from "~~/lib/onboarding/acquisition";
 
 /**
  * The acquire journey, end to end: quote, associate, swap.
@@ -65,12 +72,17 @@ interface QuoteResponse {
 type Explanation = { code: string; human: string; fix: string };
 
 export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; totalListed?: number }) => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
 
   const [tokenId, setTokenId] = useState(tokens[0]?.tokenId ?? "");
   const [hbarAmount, setHbarAmount] = useState("1");
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [profileFor, setProfileFor] = useState<AcquisitionContext | null>(null);
+  const activeContext = useRef<AcquisitionContext | null>(null);
+  activeContext.current = address && isConnected ? { account: address, tokenId, chainId: chainId ?? 0 } : null;
+  const profileRequestId = useRef(0);
+  const submissionLock = useRef(false);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   /**
    * The exact inputs the held quote was fetched for.
@@ -81,7 +93,8 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
    * rounding artefact or a slow refresh; it is a wrong number presented as a
    * right one, which is the failure this whole template argues against.
    */
-  const [quotedFor, setQuotedFor] = useState<{ token: string; hbar: string } | null>(null);
+  const [quotedFor, setQuotedFor] = useState<QuoteContext | null>(null);
+  const [now, setNow] = useState(Date.now());
   /**
    * Monotonic request id. Responses can land out of order — a debounce plus a
    * slow relay makes it easy for the quote for "1" to arrive after the quote
@@ -93,6 +106,8 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
   const [busy, setBusy] = useState(false);
   const [associateTx, setAssociateTx] = useState<string | null>(null);
   const [swapTx, setSwapTx] = useState<string | null>(null);
+  const [associateTxFor, setAssociateTxFor] = useState<AcquisitionContext | null>(null);
+  const [swapTxFor, setSwapTxFor] = useState<(AcquisitionContext & { amount: string; symbol: string }) | null>(null);
 
   const token = useMemo(() => tokens.find(t => t.tokenId === tokenId) ?? null, [tokens, tokenId]);
 
@@ -112,29 +127,54 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
    */
   const associateReceipt = useWaitForTransactionReceipt({
     hash: (associateTx as `0x${string}` | null) ?? undefined,
+    chainId: 296,
   });
   const swapReceipt = useWaitForTransactionReceipt({
     hash: (swapTx as `0x${string}` | null) ?? undefined,
+    chainId: 296,
   });
+  const associateIsCurrent = sameAcquisition(associateTxFor, activeContext.current);
+  const swapIsCurrent = sameAcquisition(swapTxFor, activeContext.current);
+  const swapConfirmed = swapReceipt.isSuccess && swapReceipt.data.status === "success";
+  const swapFailed = swapReceipt.isError || swapReceipt.data?.status === "reverted";
+  const associationFailed = associateReceipt.isError || associateReceipt.data?.status === "reverted";
+  const transactionPending = (!!associateTx && associateReceipt.isPending) || (!!swapTx && swapReceipt.isPending);
 
   /** Re-read association state. Never cached: keys and balances move. */
   const refreshProfile = useCallback(async () => {
-    if (!address || !tokenId) return;
+    const requestedFor = address && isConnected ? { account: address, tokenId, chainId: chainId ?? 0 } : null;
+    if (!requestedFor || !tokenId) return;
+    const requestId = ++profileRequestId.current;
     try {
       const response = await fetch(
-        `/api/onboarding/profile?account=${encodeURIComponent(address)}&token=${encodeURIComponent(tokenId)}`,
+        `/api/onboarding/profile?account=${encodeURIComponent(requestedFor.account)}&token=${encodeURIComponent(requestedFor.tokenId)}`,
       );
       const body = await response.json();
-      if (response.ok) setProfile(body);
-      else setError(body.error);
+      if (requestId !== profileRequestId.current || !sameAcquisition(requestedFor, activeContext.current)) return;
+      if (response.ok) {
+        setProfile(body);
+        setProfileFor(requestedFor);
+      } else {
+        setProfile(null);
+        setProfileFor(null);
+        setError(body.error);
+      }
     } catch (cause) {
+      if (requestId !== profileRequestId.current || !sameAcquisition(requestedFor, activeContext.current)) return;
+      setProfile(null);
+      setProfileFor(null);
       setError(explain(cause));
     }
-  }, [address, tokenId]);
+  }, [address, tokenId, chainId, isConnected]);
 
   /** Quote from the ROUTER, not from the price feed. See swap.ts. */
   const refreshQuote = useCallback(async () => {
-    if (!tokenId || !hbarAmount) return;
+    if (!tokenId || !hbarAmount) {
+      ++quoteRequestId.current;
+      setQuote(null);
+      setQuotedFor(null);
+      return;
+    }
     // Pin the inputs this request is for. Comparing against state later would
     // read whatever the user has typed since, which is the bug.
     const requestedToken = tokenId;
@@ -155,7 +195,8 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
 
       if (response.ok) {
         setQuote(body);
-        setQuotedFor({ token: requestedToken, hbar: requestedHbar });
+        setQuotedFor({ token: requestedToken, hbar: requestedHbar, receivedAt: Date.now() });
+        setNow(Date.now());
       } else {
         setQuote(null);
         setQuotedFor(null);
@@ -173,7 +214,7 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
    * True only when the held quote answers the question currently on screen.
    * Everything that states a number is gated on this.
    */
-  const quoteIsCurrent = !!quote && quotedFor?.token === tokenId && quotedFor?.hbar === hbarAmount;
+  const quoteIsCurrent = !!quote && currentQuote(quotedFor, tokenId, hbarAmount, now);
 
   /**
    * A transaction is an answer about ONE token and ONE account. Carrying it
@@ -185,10 +226,15 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
    * Same reason the quote is pinned to the inputs it was fetched for.
    */
   useEffect(() => {
-    setAssociateTx(null);
-    setSwapTx(null);
+    setProfile(null);
+    setProfileFor(null);
     setError(null);
-  }, [tokenId, address]);
+  }, [tokenId, address, chainId]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     void refreshProfile();
@@ -199,10 +245,46 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
     return () => clearTimeout(timer);
   }, [refreshQuote]);
 
-  const associated = profile?.association?.associated ?? false;
+  const profileIsCurrent = sameAcquisition(profileFor, activeContext.current);
+  const associated = profileIsCurrent && (profile?.association?.associated ?? false);
+  const swapAllowed = canSubmitSwap({
+    current: activeContext.current,
+    profileFor,
+    associated,
+    quoteFor: quotedFor,
+    hbar: hbarAmount,
+    pending: busy || isPending || transactionPending,
+    now,
+  });
+
+  // Receipt finality precedes mirror indexing. Retry for a bounded period;
+  // never unlock the router merely because an HTS call returned a receipt.
+  useEffect(() => {
+    if (!associateIsCurrent || associateReceipt.data?.status !== "success" || associated) return;
+    let attempts = 0;
+    void refreshProfile();
+    const timer = setInterval(() => {
+      if (++attempts >= 10) clearInterval(timer);
+      void refreshProfile();
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [associateIsCurrent, associateReceipt.data?.status, associated, refreshProfile]);
 
   const associate = async () => {
-    if (!address || !token) return;
+    const submittedFor = activeContext.current;
+    if (
+      !address ||
+      !token ||
+      !submittedFor ||
+      chainId !== 296 ||
+      !profileIsCurrent ||
+      submissionLock.current ||
+      busy ||
+      isPending ||
+      transactionPending
+    )
+      return;
+    submissionLock.current = true;
     setError(null);
     setAssociateTx(null);
     setBusy(true);
@@ -211,21 +293,40 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
         address: HTS_PRECOMPILE,
         abi: HTS_ASSOCIATE_ABI,
         functionName: "associateToken",
+        chainId: 296,
         args: [address, toEvmAddress(token.tokenId) as `0x${string}`],
         // System-contract calls cost far more than they look.
         gas: 800_000n,
       });
       setAssociateTx(hash);
-      setTimeout(() => void refreshProfile(), 4000);
+      setAssociateTxFor(submittedFor);
     } catch (cause) {
       setError(explain(cause));
     } finally {
+      submissionLock.current = false;
       setBusy(false);
     }
   };
 
   const swap = async () => {
-    if (!address || !token || !quote) return;
+    const submittedFor = activeContext.current;
+    if (
+      !address ||
+      !token ||
+      !quote ||
+      !submittedFor ||
+      submissionLock.current ||
+      !canSubmitSwap({
+        current: submittedFor,
+        profileFor,
+        associated,
+        quoteFor: quotedFor,
+        hbar: hbarAmount,
+        pending: busy || isPending || transactionPending,
+      })
+    )
+      return;
+    submissionLock.current = true;
     setError(null);
     // Drop the previous result first: between clicking and the wallet
     // returning a hash, the old "Swap complete" would otherwise still be on
@@ -237,6 +338,7 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
         address: SAUCERSWAP_TESTNET_CONTRACTS.routerV1.evmAddress as `0x${string}`,
         abi: SAUCERSWAP_V1_ROUTER_ABI,
         functionName: "swapExactETHForTokens",
+        chainId: 296,
         args: [
           // The slippage floor, not the quote. Passing the quote itself would
           // revert on any adverse tick between quoting and mining.
@@ -251,10 +353,11 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
         gas: 1_200_000n,
       });
       setSwapTx(hash);
-      setTimeout(() => void refreshProfile(), 4000);
+      setSwapTxFor({ ...submittedFor, amount: hbarAmount, symbol: token.symbol });
     } catch (cause) {
       setError(explain(cause));
     } finally {
+      submissionLock.current = false;
       setBusy(false);
     }
   };
@@ -311,11 +414,14 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
           <div className="card-body gap-2 py-5">
             <div className="flex items-center gap-3">
               <span className="loading loading-spinner loading-sm" aria-hidden />
-              <span className="text-sm opacity-70">Quoting {hbarAmount} ℏ from the router&hellip;</span>
+              <span className="text-sm opacity-70">A current quote is needed for {hbarAmount} ℏ.</span>
             </div>
             <p className="text-xs opacity-60">
-              The previous quote is not shown, because it answered a different amount.
+              Quotes expire after 30 seconds and must match the selected token and amount.
             </p>
+            <button className="btn btn-sm" onClick={() => void refreshQuote()}>
+              Refresh quote
+            </button>
           </div>
         </div>
       ) : quoteIsCurrent && quote ? (
@@ -376,7 +482,10 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
         </div>
       )}
 
-      {profile && !associated ? (
+      {isConnected && chainId !== 296 && (
+        <div className="alert alert-warning">Switch your wallet to Hedera Testnet (296) to associate or swap.</div>
+      )}
+      {profileIsCurrent && profile && !associated ? (
         <div className="card bg-primary text-primary-content shadow">
           <div className="card-body gap-3">
             <h2 className="card-title text-base">Step 1 — the kit will use: {profile.selection.strategy}</h2>
@@ -386,32 +495,36 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
               fails with <code>TOKEN_NOT_ASSOCIATED_TO_ACCOUNT</code>. This step is why that will not happen to you.
             </p>
             <div className="card-actions">
-              <button className="btn btn-neutral btn-sm" onClick={associate} disabled={busy || isPending}>
+              <button
+                className="btn btn-neutral btn-sm"
+                onClick={associate}
+                disabled={busy || isPending || transactionPending || chainId !== 296}
+              >
                 {busy || isPending ? <span className="loading loading-spinner loading-sm" /> : null}
                 Associate {token?.symbol}
               </button>
             </div>
           </div>
         </div>
-      ) : profile && associated ? (
+      ) : profileIsCurrent && profile && associated ? (
         <div className="alert alert-success flex-col items-start gap-1">
           <div className="font-bold">Step 1 complete — this account can hold {token?.symbol}.</div>
           <div className="text-sm">{profile.association?.reason}</div>
         </div>
       ) : null}
 
-      {associateTx && associateReceipt.isLoading && (
+      {associateIsCurrent && associateTx && associateReceipt.isLoading && (
         <p className="text-xs opacity-70 flex items-center gap-2">
           <span className="loading loading-spinner loading-xs" aria-hidden />
           Association submitted — waiting for consensus&hellip;
         </p>
       )}
-      {associateTx && associateReceipt.isError && (
+      {associateIsCurrent && associateTx && associationFailed && (
         <p className="text-xs text-error">
           The association transaction reverted or could not be confirmed. Check it on HashScan before swapping.
         </p>
       )}
-      {associateTx && (
+      {associateIsCurrent && associateTx && (
         <a
           className="link link-hover font-mono text-xs break-all"
           href={hashscanUrl(associateTx)}
@@ -426,7 +539,7 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
       <button
         className="btn btn-primary"
         onClick={swap}
-        disabled={!isConnected || !associated || !quote || busy || isPending}
+        disabled={!swapAllowed}
         title={
           !isConnected
             ? "Connect a wallet first"
@@ -436,7 +549,7 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
         }
       >
         {busy || isPending || swapReceipt.isLoading ? <span className="loading loading-spinner loading-sm" /> : null}
-        {swapReceipt.isSuccess
+        {swapIsCurrent && swapConfirmed
           ? `Swap again — ${hbarAmount} ℏ for ${token?.symbol}`
           : `Step 2 — swap ${hbarAmount} ℏ for ${token?.symbol}`}
       </button>
@@ -447,12 +560,12 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
         </p>
       )}
 
-      {swapTx && (
+      {swapIsCurrent && swapTx && (
         // Three states, never one. "Submitted" is a claim about the wallet;
         // only the receipt is a claim about the network.
         <div
           className={`alert flex-col items-start gap-1 ${
-            swapReceipt.isSuccess ? "alert-success" : swapReceipt.isError ? "alert-error" : "alert-info"
+            swapConfirmed ? "alert-success" : swapFailed ? "alert-error" : "alert-info"
           }`}
         >
           {swapReceipt.isLoading && (
@@ -461,18 +574,17 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
               Swap submitted — waiting for consensus&hellip;
             </div>
           )}
-          {swapReceipt.isSuccess && (
+          {swapConfirmed && (
             <>
               <div className="font-bold">
-                Swap complete — {quoteIsCurrent && quote ? `about ${quote.amountOutFormatted} ` : ""}
-                {token?.symbol} is now in this account.
+                Swap complete — {swapTxFor?.amount} ℏ exchanged for {swapTxFor?.symbol}.
               </div>
               <div className="text-sm">
                 Confirmed on chain, not merely submitted. Gas used: {swapReceipt.data?.gasUsed?.toString() ?? "—"}.
               </div>
             </>
           )}
-          {swapReceipt.isError && (
+          {swapFailed && (
             <>
               <div className="font-bold">The swap did not succeed.</div>
               <div className="text-sm">

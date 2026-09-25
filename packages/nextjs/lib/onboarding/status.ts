@@ -147,6 +147,16 @@ const NON_STATUS: Record<string, Omit<StatusExplanation, "code">> = {
     fix: "Pass an account id (0.0.x) or an EVM address.",
   },
 
+  BATCH_UNAVAILABLE: {
+    human: "Native atomic batching is not enabled for this executor and network.",
+    fix: "Use explicit association, or configure a supported native batch executor and its batch signing key.",
+  },
+
+  INVALID_ASSOCIATION_REQUEST: {
+    human: "The association request is missing valid transaction details.",
+    fix: "For airdrop or batch, supply distinct sender and recipient ids and a positive token amount within signed 64-bit range. For an account update, supply the new slot limit.",
+  },
+
   SAUCERSWAP_UNAVAILABLE: {
     human: "The SaucerSwap API did not answer.",
     fix: "Token prices and the token list are unavailable, so /acquire cannot quote. Everything that reads Hedera directly — / and /diagnose — still works, because they do not depend on the DEX.",
@@ -215,7 +225,9 @@ function extractCode(input: unknown): string {
       const value = record[key];
       if (typeof value === "string") {
         const found = normalise(value);
-        if (TABLE[found] || NON_STATUS[found]) return found;
+        // Error.name is normally "Error", which normalises to UNKNOWN. Do
+        // not let that fallback hide the useful status in Error.message.
+        if (found !== "UNKNOWN" && (TABLE[found] || NON_STATUS[found])) return found;
       }
     }
   }

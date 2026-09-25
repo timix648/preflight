@@ -10,7 +10,7 @@
  * ARCHITECTURAL RULE — this directory must stay framework-free.
  *
  * Nothing under `lib/onboarding/` may import React, Next.js, wagmi or any
- * hook. Hooks are a thin layer on top, in `hooks/onboarding/`. That rule
+ * hook. Server Components and API route handlers consume these types. That rule
  * is what lets this core run from a route handler, a script, a test, or
  * another framework entirely — and it is what makes this a foundation
  * rather than a UI. See AGENTS.md.
@@ -113,6 +113,8 @@ export interface AccountProfile {
  */
 export interface AssociationState {
   associated: boolean;
+  /** Free auto-slots permit receipt, but are not themselves a token relationship. */
+  readyToReceive?: boolean;
   strategyUsed?: AssociationStrategy;
   /** Why this strategy, in plain language. Always populated. */
   reason: string;

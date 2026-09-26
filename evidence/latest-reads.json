@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "kind": "reads",
+  "network": "testnet",
+  "chainId": 296,
+  "startedAt": "2026-09-26T09:48:32.402Z",
+  "complete": true,
+  "sourceCommit": "1fafd9304be2b0f022f6aa64386a109006d395fd",
+  "sourceFiles": {
+    "packages/nextjs/lib/onboarding/association.ts": "25cdb5ca96d778c92e7a2b7e368505d8bfa475754e0f22606bb13a817d3ee27c",
+    "packages/nextjs/lib/onboarding/sdk-executor.ts": "6b8c17f5d421d1731eb3c1e9ace6461db6629cda06ece57de26bca3b0f09ab95",
+    "packages/nextjs/lib/onboarding/evm-executor.ts": "4ff5bf17416b5f80dd77e437c18e861199598b9fc96fa5e790baa90701ba5b76",
+    "packages/nextjs/lib/onboarding/mirror.ts": "8a940e55183feb6056944fdfbd97136c6376fc144fad32fb2f45099aa99968ad",
+    "packages/nextjs/lib/onboarding/keys.ts": "14a3af04d374e13614202b82595f49fac92cb8c52397370f232119a99bf8f3be",
+    "packages/nextjs/lib/onboarding/relay.ts": "f3845b4152978cf3b138abdb4392ca36a3063b19eb61fa275b899468397a2787",
+    "packages/nextjs/lib/onboarding/saucerswap.ts": "b98b2256c4dbde81dc08e55d2bb10dfacb86f6d4ca9db7a9dc04058bc45fc161",
+    "packages/nextjs/lib/onboarding/swap.ts": "2e7da5b5aa2fb878e04ce6a70755e68b619b559c6387262d5c9589c4c843922a",
+    "packages/nextjs/lib/onboarding/units.ts": "526eb1b12bbaf571ed0b03796f718f880a3ee6cca44326e46dfae3d5b0fd47bf",
+    "packages/nextjs/lib/onboarding/consistency.ts": "e5cad496cf5c4327e56d69c6525f0995f045dc204212df37a8dd4ec2c40b5c8e"
+  },
+  "transactions": [],
+  "assertions": [
+    {
+      "name": "Hashio returned live testnet config",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:34.574Z",
+      "details": {
+        "version": "relay/0.79.0-rc4",
+        "live": true,
+        "chainId": 296,
+        "getLogsBlockRangeLimit": 1000,
+        "defaultRateLimit": 200,
+        "callDataSizeLimit": 131072,
+        "paymasterEnabled": false
+      }
+    },
+    {
+      "name": "Mirror/key adapter recognizes ED25519 and routes authorization to HAS",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:35.778Z",
+      "details": {
+        "accountId": "0.0.2",
+        "evmAddress": "0x0000000000000000000000000000000000000002",
+        "addressForm": "evm-long-zero",
+        "ecrecoverCompatible": false,
+        "keyType": "ED25519",
+        "verificationRoute": "is-authorized",
+        "autoAssociationSlots": 0,
+        "freeAutoAssociationSlots": 0
+      }
+    },
+    {
+      "name": "Finite slot count never exceeds its ceiling",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:36.286Z",
+      "details": {
+        "accountId": "0.0.10622718",
+        "evmAddress": "0x0000000000000000000000000000000000a216fe",
+        "addressForm": "evm-long-zero",
+        "ecrecoverCompatible": false,
+        "keyType": "ECDSA",
+        "verificationRoute": "ecrecover",
+        "autoAssociationSlots": 1,
+        "freeAutoAssociationSlots": 0
+      }
+    },
+    {
+      "name": "Balance reconciliation has independent mirror and RPC readings",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:37.005Z",
+      "details": {
+        "mirror": {
+          "value": "3388371893372973056",
+          "source": "mirror-node",
+          "asOf": 1790416112,
+          "mayBeStale": false
+        },
+        "rpc": {
+          "value": "3388371893372973302",
+          "source": "json-rpc",
+          "asOf": 1790416116,
+          "mayBeStale": false
+        },
+        "agree": false,
+        "preferred": {
+          "value": "3388371893372973302",
+          "source": "json-rpc",
+          "asOf": 1790416116,
+          "mayBeStale": false
+        },
+        "explanation": "The mirror node and the relay disagree. This is normal shortly after a transfer: mirror-node balances come from a periodic file, while the relay reads live state. Showing the live value."
+      }
+    },
+    {
+      "name": "SaucerSwap returned live token metadata and activity",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:39.888Z",
+      "details": {
+        "tokenCount": 617,
+        "decimalHistogram": [
+          {
+            "decimals": 0,
+            "count": 39
+          },
+          {
+            "decimals": 1,
+            "count": 3
+          },
+          {
+            "decimals": 2,
+            "count": 72
+          },
+          {
+            "decimals": 3,
+            "count": 17
+          },
+          {
+            "decimals": 4,
+            "count": 9
+          },
+          {
+            "decimals": 5,
+            "count": 4
+          },
+          {
+            "decimals": 6,
+            "count": 133
+          },
+          {
+            "decimals": 7,
+            "count": 2
+          },
+          {
+            "decimals": 8,
+            "count": 313
+          },
+          {
+            "decimals": 9,
+            "count": 9
+          },
+          {
+            "decimals": 11,
+            "count": 1
+          },
+          {
+            "decimals": 13,
+            "count": 1
+          },
+          {
+            "decimals": 18,
+            "count": 14
+          }
+        ],
+        "stats": {
+          "swapTotal": 986777,
+          "tvlUsd": 935386.880546,
+          "circulatingSauce": "981891377031000"
+        }
+      }
+    },
+    {
+      "name": "SAUCE: router quote has positive output and a lower slippage floor",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:40.588Z",
+      "details": {
+        "token": {
+          "tokenId": "0.0.1183558",
+          "evmAddress": "0x0000000000000000000000000000000000120f46",
+          "symbol": "SAUCE",
+          "name": "Sauce",
+          "decimals": 6
+        },
+        "quote": {
+          "amountIn": "1000000",
+          "amountOut": "549395",
+          "amountOutFormatted": "0.549395",
+          "amountOutMin": "543901",
+          "rate": 54.939499999999995,
+          "path": [
+            "0x0000000000000000000000000000000000003ad2",
+            "0x0000000000000000000000000000000000120f46"
+          ]
+        }
+      }
+    },
+    {
+      "name": "CLXY: router quote has positive output and a lower slippage floor",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:41.168Z",
+      "details": {
+        "token": {
+          "tokenId": "0.0.5365",
+          "evmAddress": "0x00000000000000000000000000000000000014f5",
+          "symbol": "CLXY",
+          "name": "Calaxy",
+          "decimals": 6
+        },
+        "quote": {
+          "amountIn": "1000000",
+          "amountOut": "517087",
+          "amountOutFormatted": "0.517087",
+          "amountOutMin": "511916",
+          "rate": 51.70869999999999,
+          "path": [
+            "0x0000000000000000000000000000000000003ad2",
+            "0x00000000000000000000000000000000000014f5"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Deployed AssociationProbe reaches the live HTS precompile",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:43.911Z",
+      "details": {
+        "contract": "0x57631c41cDFB0ef2A7D4ef83b35c38558FA3e2D7",
+        "token": "0.0.1183558",
+        "isHtsToken": true,
+        "isFungible": true
+      }
+    },
+    {
+      "name": "Deployed probe recognizes long-zero addresses",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:48:44.467Z"
+    }
+  ],
+  "finishedAt": "2026-09-26T09:48:44.468Z"
+}

@@ -1,0 +1,782 @@
+{
+  "schemaVersion": 1,
+  "kind": "native",
+  "network": "testnet",
+  "chainId": 296,
+  "startedAt": "2026-09-26T16:08:45.591Z",
+  "complete": true,
+  "sourceCommit": "1fafd9304be2b0f022f6aa64386a109006d395fd",
+  "sourceFiles": {
+    "packages/nextjs/lib/onboarding/association.ts": "25cdb5ca96d778c92e7a2b7e368505d8bfa475754e0f22606bb13a817d3ee27c",
+    "packages/nextjs/lib/onboarding/sdk-executor.ts": "6b8c17f5d421d1731eb3c1e9ace6461db6629cda06ece57de26bca3b0f09ab95",
+    "packages/nextjs/lib/onboarding/evm-executor.ts": "4ff5bf17416b5f80dd77e437c18e861199598b9fc96fa5e790baa90701ba5b76",
+    "packages/nextjs/lib/onboarding/mirror.ts": "8a940e55183feb6056944fdfbd97136c6376fc144fad32fb2f45099aa99968ad",
+    "packages/nextjs/lib/onboarding/keys.ts": "14a3af04d374e13614202b82595f49fac92cb8c52397370f232119a99bf8f3be",
+    "packages/nextjs/lib/onboarding/relay.ts": "f3845b4152978cf3b138abdb4392ca36a3063b19eb61fa275b899468397a2787",
+    "packages/nextjs/lib/onboarding/saucerswap.ts": "b98b2256c4dbde81dc08e55d2bb10dfacb86f6d4ca9db7a9dc04058bc45fc161",
+    "packages/nextjs/lib/onboarding/swap.ts": "2e7da5b5aa2fb878e04ce6a70755e68b619b559c6387262d5c9589c4c843922a",
+    "packages/nextjs/lib/onboarding/units.ts": "526eb1b12bbaf571ed0b03796f718f880a3ee6cca44326e46dfae3d5b0fd47bf",
+    "packages/nextjs/lib/onboarding/consistency.ts": "e5cad496cf5c4327e56d69c6525f0995f045dc204212df37a8dd4ec2c40b5c8e"
+  },
+  "transactions": [
+    {
+      "label": "Create isolated two-decimal evidence token",
+      "transactionId": "0.0.10727914@1790416718.876227842",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416718-876227842",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416729.563354196",
+      "payer": "0.0.10727914",
+      "type": "TOKENCREATION",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": 100000,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281591222,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Create explicit association fixture",
+      "transactionId": "0.0.10727914@1790416728.289757222",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416728-289757222",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416734.606684104",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOCREATEACCOUNT",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Before: unassociated transfer",
+      "transactionId": "0.0.10727914@1790416730.714923658",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416730-714923658",
+      "expected": "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT",
+      "verified": true,
+      "result": "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT",
+      "consensusTimestamp": "1790416739.759866188",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOTRANSFER",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: explicit association",
+      "transactionId": "0.0.10727916@1790416739.072577022",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727916-1790416739-072577022",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416746.183871104",
+      "payer": "0.0.10727916",
+      "type": "TOKENASSOCIATE",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "After: identical transfer",
+      "transactionId": "0.0.10727914@1790416742.762508366",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416742-762508366",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416751.223717030",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOTRANSFER",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": -100,
+          "is_approval": false
+        },
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727916",
+          "amount": 100,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Create existing finite auto-slot fixture",
+      "transactionId": "0.0.10727914@1790416751.690533045",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416751-690533045",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416759.205475302",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOCREATEACCOUNT",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Existing auto-slot: delivery",
+      "transactionId": "0.0.10727914@1790416758.670208229",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416758-670208229",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416764.187202104",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOTRANSFER",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": -100,
+          "is_approval": false
+        },
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727918",
+          "amount": 100,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 65361150,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Create raise auto-slot limit fixture",
+      "transactionId": "0.0.10727914@1790416760.563692524",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416760-563692524",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416768.625746280",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOCREATEACCOUNT",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: raise automatic slots",
+      "transactionId": "0.0.10727923@1790416763.409639538",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727923-1790416763-409639538",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416772.940023357",
+      "payer": "0.0.10727923",
+      "type": "CRYPTOUPDATEACCOUNT",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 281948,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Raised auto-slot: delivery",
+      "transactionId": "0.0.10727914@1790416767.257097931",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416767-257097931",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416777.147118603",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOTRANSFER",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": -100,
+          "is_approval": false
+        },
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727923",
+          "amount": 100,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 65361150,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Create pending airdrop and claim fixture",
+      "transactionId": "0.0.10727914@1790416775.920624087",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416775-920624087",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416784.340373104",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOCREATEACCOUNT",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: pending airdrop",
+      "transactionId": "0.0.10727914@1790416782.129345848",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416782-129345848",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416788.780026366",
+      "payer": "0.0.10727914",
+      "type": "TOKENAIRDROP",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 129440711,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: claim pending airdrop",
+      "transactionId": "0.0.10727931@1790416786.790731496",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727931-1790416786-790731496",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416794.547270236",
+      "payer": "0.0.10727931",
+      "type": "TOKENCLAIMAIRDROP",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": -100,
+          "is_approval": false
+        },
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727931",
+          "amount": 100,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: reject held token",
+      "transactionId": "0.0.10727931@1790416795.783954793",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727931-1790416795-783954793",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416801.380189104",
+      "payer": "0.0.10727931",
+      "type": "TOKENREJECT",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": 100,
+          "is_approval": false
+        },
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727931",
+          "amount": -100,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Create pending airdrop cancellation fixture",
+      "transactionId": "0.0.10727914@1790416795.926398331",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416795-926398331",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416805.400165108",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOCREATEACCOUNT",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: airdrop before cancellation",
+      "transactionId": "0.0.10727914@1790416803.834330998",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416803-834330998",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416810.147516068",
+      "payer": "0.0.10727914",
+      "type": "TOKENAIRDROP",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 129440711,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: cancel pending airdrop",
+      "transactionId": "0.0.10727914@1790416807.576938000",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416807-576938000",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416815.486537117",
+      "payer": "0.0.10727914",
+      "type": "TOKENCANCELAIRDROP",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: immediate airdrop delivery",
+      "transactionId": "0.0.10727914@1790416814.554881035",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416814-554881035",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416821.665287834",
+      "payer": "0.0.10727914",
+      "type": "TOKENAIRDROP",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": -100,
+          "is_approval": false
+        },
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727918",
+          "amount": 100,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Create atomic batch fixture",
+      "transactionId": "0.0.10727914@1790416819.576489616",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416819-576489616",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416827.006591366",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOCREATEACCOUNT",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: atomic batch",
+      "transactionId": "0.0.10727942@1790416826.614589144",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727942-1790416826-614589144",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416832.825372639",
+      "payer": "0.0.10727942",
+      "type": "ATOMICBATCH",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Batch child: TokenAssociateTransaction",
+      "transactionId": "0.0.10727942@1790416822.844025493",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727942-1790416822-844025493",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416832.825372640",
+      "payer": "0.0.10727942",
+      "type": "TOKENASSOCIATE",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": "1790416832.825372639"
+    },
+    {
+      "label": "Batch child: TransferTransaction",
+      "transactionId": "0.0.10727942@1790416826.446138345",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727942-1790416826-446138345",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416832.825372641",
+      "payer": "0.0.10727942",
+      "type": "CRYPTOTRANSFER",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": -100,
+          "is_approval": false
+        },
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727942",
+          "amount": 100,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": "1790416832.825372639"
+    },
+    {
+      "label": "Create atomic rollback fixture",
+      "transactionId": "0.0.10727914@1790438942.403213632",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790438942-403213632",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790438949.008567960",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOCREATEACCOUNT",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    {
+      "label": "Native adapter: intentionally failing atomic batch",
+      "transactionId": "0.0.10731737@1790438948.537993321",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10731737-1790438948-537993321",
+      "expected": "INNER_TRANSACTION_FAILED",
+      "verified": true,
+      "result": "INNER_TRANSACTION_FAILED",
+      "consensusTimestamp": "1790438954.408346104",
+      "payer": "0.0.10731737",
+      "type": "ATOMICBATCH",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    }
+  ],
+  "assertions": [
+    {
+      "name": "Failed transfer moved no tokens",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:03.085Z"
+    },
+    {
+      "name": "Decision selects explicit association",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:06.504Z"
+    },
+    {
+      "name": "Recipient pays explicit association",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:09.397Z"
+    },
+    {
+      "name": "After: identical transfer: exact token delivery",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:15.126Z"
+    },
+    {
+      "name": "Existing slot requires no transaction or signing",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:22.201Z"
+    },
+    {
+      "name": "Existing auto-slot: delivery: exact token delivery",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:26.541Z"
+    },
+    {
+      "name": "Arrival created an automatic relationship",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:27.144Z"
+    },
+    {
+      "name": "Adapter raises slots without falsely reporting association",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:32.160Z"
+    },
+    {
+      "name": "Account now accepts unlimited slots",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:35.233Z"
+    },
+    {
+      "name": "Raised auto-slot: delivery: exact token delivery",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:41.457Z"
+    },
+    {
+      "name": "Raised-slot delivery associated automatically",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:42.279Z"
+    },
+    {
+      "name": "Pending airdrop is not reported as associated",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:51.954Z"
+    },
+    {
+      "name": "Pending amount indexed by mirror",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:52.811Z"
+    },
+    {
+      "name": "Native adapter: claim pending airdrop: exact token delivery",
+      "passed": true,
+      "checkedAt": "2026-09-26T09:59:59.420Z"
+    },
+    {
+      "name": "Native adapter: reject held token: exact token delivery",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:03.573Z"
+    },
+    {
+      "name": "Cancellation fixture is pending",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:13.406Z"
+    },
+    {
+      "name": "Cancelled pending entry disappears",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:20.189Z"
+    },
+    {
+      "name": "Immediate airdrop is not reported pending",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:21.714Z"
+    },
+    {
+      "name": "Native adapter: immediate airdrop delivery: exact token delivery",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:24.940Z"
+    },
+    {
+      "name": "Decision selects native batch",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:32.211Z"
+    },
+    {
+      "name": "TokenAssociateTransaction belongs to the outer batch",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:38.835Z"
+    },
+    {
+      "name": "TransferTransaction belongs to the outer batch",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:39.613Z"
+    },
+    {
+      "name": "Batch child: TransferTransaction: exact token delivery",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:39.614Z"
+    },
+    {
+      "name": "Batch created an explicit relationship",
+      "passed": true,
+      "checkedAt": "2026-09-26T10:00:39.831Z"
+    },
+    {
+      "name": "Failed batch left no token relationship",
+      "passed": true,
+      "checkedAt": "2026-09-26T16:09:19.438Z"
+    }
+  ],
+  "operator": "0.0.10727914",
+  "walletAddress": "0x807f79AF943d7E3F5D232f18E87031fAC2490B5C",
+  "submissions": [
+    {
+      "label": "Create isolated two-decimal evidence token",
+      "transactionId": "0.0.10727914@1790416718.876227842"
+    },
+    {
+      "label": "Create explicit association fixture",
+      "transactionId": "0.0.10727914@1790416728.289757222"
+    },
+    {
+      "label": "Create existing finite auto-slot fixture",
+      "transactionId": "0.0.10727914@1790416751.690533045"
+    },
+    {
+      "label": "Create raise auto-slot limit fixture",
+      "transactionId": "0.0.10727914@1790416760.563692524"
+    },
+    {
+      "label": "Create pending airdrop and claim fixture",
+      "transactionId": "0.0.10727914@1790416775.920624087"
+    },
+    {
+      "label": "Create pending airdrop cancellation fixture",
+      "transactionId": "0.0.10727914@1790416795.926398331"
+    },
+    {
+      "label": "Create atomic batch fixture",
+      "transactionId": "0.0.10727914@1790416819.576489616"
+    }
+  ],
+  "token": {
+    "id": "0.0.10727915",
+    "symbol": "PFE",
+    "decimals": 2
+  },
+  "fixtures": [
+    "0.0.10727916",
+    "0.0.10727918",
+    "0.0.10727923",
+    "0.0.10727931",
+    "0.0.10727936",
+    "0.0.10727942",
+    "0.0.10731737"
+  ],
+  "headlineRecipient": "0.0.10727916",
+  "headline": {
+    "before": {
+      "label": "Before: unassociated transfer",
+      "transactionId": "0.0.10727914@1790416730.714923658",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416730-714923658",
+      "expected": "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT",
+      "verified": true,
+      "result": "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT",
+      "consensusTimestamp": "1790416739.759866188",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOTRANSFER",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    },
+    "act": {
+      "label": "Native adapter: explicit association",
+      "transactionId": "0.0.10727916@1790416739.072577022",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727916-1790416739-072577022",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416746.183871104",
+      "payer": "0.0.10727916",
+      "type": "TOKENASSOCIATE",
+      "tokenTransfers": [],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 64079560,
+      "parentConsensusTimestamp": null
+    },
+    "after": {
+      "label": "After: identical transfer",
+      "transactionId": "0.0.10727914@1790416742.762508366",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0.0.10727914-1790416742-762508366",
+      "expected": "SUCCESS",
+      "verified": true,
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790416751.223717030",
+      "payer": "0.0.10727914",
+      "type": "CRYPTOTRANSFER",
+      "tokenTransfers": [
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727914",
+          "amount": -100,
+          "is_approval": false
+        },
+        {
+          "token_id": "0.0.10727915",
+          "account": "0.0.10727916",
+          "amount": 100,
+          "is_approval": false
+        }
+      ],
+      "automaticAssociations": [],
+      "chargedFeeTinybar": 1281590,
+      "parentConsensusTimestamp": null
+    }
+  },
+  "error": "Relay rejected the first EVM association before submission: gas price 218 was below minimum 1140000000000. Signed transaction payload omitted.",
+  "cleanup": [
+    {
+      "from": "0.0.10727916",
+      "to": "0.0.10727914",
+      "tinybar": "215920440",
+      "transactionId": "0.0.10727916@1790438923.600342742",
+      "confirmed": true
+    },
+    {
+      "from": "0.0.10727918",
+      "to": "0.0.10727914",
+      "tinybar": "280000000",
+      "transactionId": "0.0.10727918@1790438929.926019695",
+      "confirmed": true
+    },
+    {
+      "from": "0.0.10727923",
+      "to": "0.0.10727914",
+      "tinybar": "279718052",
+      "transactionId": "0.0.10727923@1790438931.027480669",
+      "confirmed": true
+    },
+    {
+      "from": "0.0.10727931",
+      "to": "0.0.10727914",
+      "tinybar": "277436820",
+      "transactionId": "0.0.10727931@1790438936.762744248",
+      "confirmed": true
+    },
+    {
+      "from": "0.0.10727936",
+      "to": "0.0.10727914",
+      "tinybar": "280000000",
+      "transactionId": "0.0.10727936@1790438937.948077732",
+      "confirmed": true
+    },
+    {
+      "from": "0.0.10727942",
+      "to": "0.0.10727914",
+      "tinybar": "213357260",
+      "transactionId": "0.0.10727942@1790438941.962121078",
+      "confirmed": true
+    },
+    {
+      "from": "0.0.10731737",
+      "to": "0.0.10727914",
+      "tinybar": "213357260",
+      "transactionId": "0.0.10731737@1790438965.351058409",
+      "confirmed": true
+    },
+    {
+      "from": "0x807f79AF943d7E3F5D232f18E87031fAC2490B5C",
+      "to": "0x823C1545B90F4A2a28a3Ee31DF07EBdF1c2a2D1C",
+      "weibar": "15119247090000000000",
+      "transactionHash": "0x668d1127e8a19ba314bcb05c0f3c7f9769ac5560cd17aa42613340856104ef63",
+      "confirmed": true
+    }
+  ],
+  "resumedFrom": "2026-09-26T09:58:44.648Z",
+  "interruptedPrecheck": {
+    "id": "0.0.10727914@1790416834.964837616",
+    "status": "INSUFFICIENT_PAYER_BALANCE"
+  },
+  "rollbackCreationId": "0.0.10727914@1790438942.403213632",
+  "finishedAt": "2026-09-26T16:09:52.475Z",
+  "refundHash": "0x668d1127e8a19ba314bcb05c0f3c7f9769ac5560cd17aa42613340856104ef63"
+}

@@ -94,3 +94,11 @@ packages/hardhat/.env.tier35-stash
 /demo-storyboard.*
 /recordings/
 /video-exports/
+
+# Evidence run history. The two `latest-*.json` files ARE committed — they are
+# the machine-readable proof behind EVIDENCE.md, and each carries a SHA-256 of
+# every source file that produced it, so it cannot drift from the code without
+# the mismatch showing. The per-run history under runs/ is process, not
+# product, and one of those runs is an incomplete EVM attempt that would
+# misrepresent what has actually been proven on-chain.
+/evidence/runs/

@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "kind": "evm",
+  "network": "testnet",
+  "chainId": 296,
+  "startedAt": "2026-09-26T18:27:11.414Z",
+  "complete": true,
+  "sourceCommit": "088c0953c1846a27d5895c190a0c6681b6bc0b1f",
+  "sourceFiles": {
+    "packages/nextjs/lib/onboarding/association.ts": "25cdb5ca96d778c92e7a2b7e368505d8bfa475754e0f22606bb13a817d3ee27c",
+    "packages/nextjs/lib/onboarding/sdk-executor.ts": "6b8c17f5d421d1731eb3c1e9ace6461db6629cda06ece57de26bca3b0f09ab95",
+    "packages/nextjs/lib/onboarding/evm-executor.ts": "4ff5bf17416b5f80dd77e437c18e861199598b9fc96fa5e790baa90701ba5b76",
+    "packages/nextjs/lib/onboarding/mirror.ts": "8a940e55183feb6056944fdfbd97136c6376fc144fad32fb2f45099aa99968ad",
+    "packages/nextjs/lib/onboarding/keys.ts": "14a3af04d374e13614202b82595f49fac92cb8c52397370f232119a99bf8f3be",
+    "packages/nextjs/lib/onboarding/relay.ts": "f3845b4152978cf3b138abdb4392ca36a3063b19eb61fa275b899468397a2787",
+    "packages/nextjs/lib/onboarding/saucerswap.ts": "b98b2256c4dbde81dc08e55d2bb10dfacb86f6d4ca9db7a9dc04058bc45fc161",
+    "packages/nextjs/lib/onboarding/swap.ts": "2e7da5b5aa2fb878e04ce6a70755e68b619b559c6387262d5c9589c4c843922a",
+    "packages/nextjs/lib/onboarding/units.ts": "526eb1b12bbaf571ed0b03796f718f880a3ee6cca44326e46dfae3d5b0fd47bf",
+    "packages/nextjs/lib/onboarding/consistency.ts": "e5cad496cf5c4327e56d69c6525f0995f045dc204212df37a8dd4ec2c40b5c8e"
+  },
+  "transactions": [
+    {
+      "label": "EVM adapter: SAUCE association",
+      "verified": true,
+      "hash": "0x0a64fd0c793b6ebf533a195126d3aa3876ff93f39a056e770c608aacb3f94009",
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790447244.853110104",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0x0a64fd0c793b6ebf533a195126d3aa3876ff93f39a056e770c608aacb3f94009"
+    },
+    {
+      "label": "EVM adapter: SAUCE acquisition",
+      "hash": "0x19e17a043d6580cc03bdef4059b96d850b827bbf5962554acdb1736810b5b15a",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0x19e17a043d6580cc03bdef4059b96d850b827bbf5962554acdb1736810b5b15a",
+      "consensusTimestamp": "1790447256.375167152",
+      "result": "SUCCESS",
+      "verified": true,
+      "receivedUnits": "549395",
+      "tokenId": "0.0.1183558",
+      "decimals": 6
+    },
+    {
+      "label": "EVM adapter: CLXY association",
+      "verified": true,
+      "hash": "0xd4b4a29ab937b613925de1dbb9d5784db6860c0cb9f140fcad19fe8bfe79d0a0",
+      "result": "SUCCESS",
+      "consensusTimestamp": "1790447269.069771104",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0xd4b4a29ab937b613925de1dbb9d5784db6860c0cb9f140fcad19fe8bfe79d0a0"
+    },
+    {
+      "label": "EVM adapter: CLXY acquisition",
+      "hash": "0xa4abd667824b3c62d94750fcc10b1d0ea73569c164e79377c1ce7005c5085c6f",
+      "hashscanUrl": "https://hashscan.io/testnet/transaction/0xa4abd667824b3c62d94750fcc10b1d0ea73569c164e79377c1ce7005c5085c6f",
+      "consensusTimestamp": "1790447282.535384928",
+      "result": "SUCCESS",
+      "verified": true,
+      "receivedUnits": "517087",
+      "tokenId": "0.0.5365",
+      "decimals": 6
+    }
+  ],
+  "assertions": [
+    {
+      "name": "Relay chain ID is Hedera testnet",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:19.198Z"
+    },
+    {
+      "name": "SAUCE: association receipt succeeded",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:31.386Z",
+      "details": {
+        "hash": "0x0a64fd0c793b6ebf533a195126d3aa3876ff93f39a056e770c608aacb3f94009"
+      }
+    },
+    {
+      "name": "SAUCE: HTS returned SUCCESS (22)",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:31.945Z"
+    },
+    {
+      "name": "SAUCE: production swap guard accepts current association and quote",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:32.859Z"
+    },
+    {
+      "name": "SAUCE: swap receipt succeeded",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:43.233Z",
+      "details": {
+        "hash": "0x19e17a043d6580cc03bdef4059b96d850b827bbf5962554acdb1736810b5b15a"
+      }
+    },
+    {
+      "name": "SAUCE: mirror confirms successful router execution",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:43.838Z"
+    },
+    {
+      "name": "SAUCE: actual received tokens meet slippage floor",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:43.850Z",
+      "details": {
+        "tokenId": "0.0.1183558",
+        "decimals": 6,
+        "hbarSpent": "0.01",
+        "quotedUnits": "549395",
+        "minimumUnits": "543901",
+        "receivedUnits": "549395"
+      }
+    },
+    {
+      "name": "CLXY: association receipt succeeded",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:55.939Z",
+      "details": {
+        "hash": "0xd4b4a29ab937b613925de1dbb9d5784db6860c0cb9f140fcad19fe8bfe79d0a0"
+      }
+    },
+    {
+      "name": "CLXY: HTS returned SUCCESS (22)",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:56.807Z"
+    },
+    {
+      "name": "CLXY: production swap guard accepts current association and quote",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:27:58.683Z"
+    },
+    {
+      "name": "CLXY: swap receipt succeeded",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:28:06.296Z",
+      "details": {
+        "hash": "0xa4abd667824b3c62d94750fcc10b1d0ea73569c164e79377c1ce7005c5085c6f"
+      }
+    },
+    {
+      "name": "CLXY: mirror confirms successful router execution",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:28:07.026Z"
+    },
+    {
+      "name": "CLXY: actual received tokens meet slippage floor",
+      "passed": true,
+      "checkedAt": "2026-09-26T18:28:07.029Z",
+      "details": {
+        "tokenId": "0.0.5365",
+        "decimals": 6,
+        "hbarSpent": "0.01",
+        "quotedUnits": "517087",
+        "minimumUnits": "511916",
+        "receivedUnits": "517087"
+      }
+    }
+  ],
+  "nativeRun": "2026-09-26T18:24:43.895Z",
+  "signing": "Local script signer; shared production EVM builders. Browser wallet UX is tested separately.",
+  "accountId": "0.0.10505627",
+  "walletAddress": "0xF20e290D493EDC83bade49DC4bF54A925f5ddA8a",
+  "submittedHash": "0xa4abd667824b3c62d94750fcc10b1d0ea73569c164e79377c1ce7005c5085c6f",
+  "finishedAt": "2026-09-26T18:28:07.031Z"
+}

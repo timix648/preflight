@@ -54,20 +54,20 @@ export interface EvidenceBeat {
 
 /** The token used for the run — generated from verified native evidence. */
 export const EVIDENCE_TOKEN = {
-  id: "0.0.10727915",
+  id: "0.0.10733126",
   symbol: "PFE",
   decimals: 2,
 } as const;
 export const EVIDENCE_ACCOUNTS = {
-  sender: "0.0.10727914",
-  recipient: "0.0.10727916",
+  sender: "0.0.10505627",
+  recipient: "0.0.10733127",
 } as const;
 export const EVIDENCE_BEATS: readonly EvidenceBeat[] = [
   {
     phase: "before",
     label: "Before",
-    transactionId: "0.0.10727914-1790416730-714923658",
-    consensus: 0.759866188,
+    transactionId: "0.0.10505627-1790447088-574838127",
+    consensus: 0.132954104,
     status: "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT",
     ok: false,
     tokensMoved: null,
@@ -76,8 +76,8 @@ export const EVIDENCE_BEATS: readonly EvidenceBeat[] = [
   {
     phase: "act",
     label: "The kit acts",
-    transactionId: "0.0.10727916-1790416739-072577022",
-    consensus: 7.183871104,
+    transactionId: "0.0.10733127-1790447088-916920985",
+    consensus: 4.210820961,
     status: "SUCCESS",
     ok: true,
     tokensMoved: null,
@@ -86,11 +86,11 @@ export const EVIDENCE_BEATS: readonly EvidenceBeat[] = [
   {
     phase: "after",
     label: "After",
-    transactionId: "0.0.10727914-1790416742-762508366",
-    consensus: 12.22371703,
+    transactionId: "0.0.10505627-1790447093-654666509",
+    consensus: 8.869653104,
     status: "SUCCESS",
     ok: true,
-    tokensMoved: "0.0.10727914 −100 → 0.0.10727916 +100",
+    tokensMoved: "0.0.10505627 −100 → 0.0.10733127 +100",
     note: "The identical transfer, to the identical account. The only required state change was the association.",
   },
 ] as const;

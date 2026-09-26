@@ -94,7 +94,7 @@ a signer; a clean dependency install and build can take longer than five minutes
 | It reports slots that are **available**, not the ceiling | `/diagnose?account=0.0.10622718` → **`0 free of 1`**. Confirm independently: [`accounts/0.0.10622718`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.10622718) gives the ceiling, [`/tokens`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.10622718/tokens) shows the slot is already taken. |
 | ED25519 accounts are unusable with EVM tooling           | `/diagnose?account=0.0.2` → long-zero address, ECRECOVER **not** compatible, and the reason: it returns a _different valid-looking_ address rather than failing.                                                                                                                                                      |
 | Quotes come from the router, not a price feed            | `/acquire`, pick SAUCE, enter 1. The panel shows the router figure, the published feed figure, and the divergence between them — measured above 10% at times.                                                                                                                                                         |
-| The association actually happened                        | [Fresh before/after evidence](EVIDENCE.md#the-pair-that-matters): failed transfer, recipient-paid association, then identical successful transfer.                                                                                                                                                                    |
+| The association actually happened | [Fresh before/after evidence](EVIDENCE.md#the-pair-that-matters): failed transfer, recipient-paid association, then identical successful transfer. |
 | The tests are real                                       | `yarn test` — core and contract regressions, offline. `yarn workspace @sh/nextjs test:live` — 14 against live testnet.                                                                                                                                                                                                |
 | It passes the bounty's own gate                          | Previous recorded run: `passed=true`, 0 findings, 7/7 routes. Re-run `yarn harness:validate` for your checkout.                                                                                                                                                                                                       |
 
@@ -446,26 +446,26 @@ reusable, but no route targets mainnet and the harness recipe rejects it.
 
 The latest adapter evidence was completed on **2026-09-26 UTC**.
 [Consensus tables and exact assertions](EVIDENCE.md) cover the native SDK and
-public read integrations. **Fresh signed EVM execution remains unverified** after a relay gas-price rejection. The runner fix is locally tested; no more funding or refund work is underway.
+public read integrations. The shared EVM builders also have fresh signed proof.
 
-| Step         | Result                                                | Public proof                                                                                    |
-| ------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Before       | TOKEN_NOT_ASSOCIATED_TO_ACCOUNT; zero token transfers | [failed transfer](https://hashscan.io/testnet/transaction/0.0.10727914-1790416730-714923658)    |
-| Adapter acts | SUCCESS; recipient-paid explicit association          | [association](https://hashscan.io/testnet/transaction/0.0.10727916-1790416739-072577022)        |
-| After        | SUCCESS; 100 smallest units delivered                 | [identical transfer](https://hashscan.io/testnet/transaction/0.0.10727914-1790416742-762508366) |
+| Step | Result | Public proof |
+| --- | --- | --- |
+| Before | TOKEN_NOT_ASSOCIATED_TO_ACCOUNT; zero token transfers | [failed transfer](https://hashscan.io/testnet/transaction/0.0.10505627-1790447088-574838127) |
+| Adapter acts | SUCCESS; recipient-paid explicit association | [association](https://hashscan.io/testnet/transaction/0.0.10733127-1790447088-916920985) |
+| After | SUCCESS; 100 smallest units delivered | [identical transfer](https://hashscan.io/testnet/transaction/0.0.10505627-1790447093-654666509) |
 
 The token has **2 decimals**. The identical transfer moves **100 smallest units**
 only after the adapter associates the recipient. The elapsed consensus time is
-**11.464 seconds**, derived from the new records rather than reused
+**8.737 seconds**, derived from the new records rather than reused
 from an older run.
 
-| Proof                  | What a reviewer can inspect                                                                                               |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Proof | What a reviewer can inspect |
+| --- | --- |
 | Four native mechanisms | Explicit association, an existing automatic slot, raising the slot limit, pending/immediate airdrops, and an atomic batch |
-| Airdrop lifecycle      | Claim, rejection of a held token, and sender cancellation, each executed through the reusable adapter                     |
-| Failure safety         | Failed ordinary transfer moves nothing; failed batch leaves no association behind                                         |
-| EVM acquisition        | Shared payload builders and fee selection have local tests; fresh on-chain association and swap proof is outstanding      |
-| Public integrations    | New account/key/slot/balance snapshots, Hashio config, SaucerSwap metadata/quotes, and deployed probe calls               |
+| Airdrop lifecycle | Claim, rejection of a held token, and sender cancellation, each executed through the reusable adapter |
+| Failure safety | Failed ordinary transfer moves nothing; failed batch leaves no association behind |
+| EVM acquisition | HTS association and two 0.01-HBAR swaps through the AcquireFlow payload builders |
+| Public integrations | New account/key/slot/balance snapshots, Hashio config, SaucerSwap metadata/quotes, and deployed probe calls |
 
 The EVM runner uses a local test signer funded from a browser wallet. It does
 not claim that a human clicked every AcquireFlow step. Browser regressions exercise
@@ -879,18 +879,18 @@ running and reporting a pass that proves nothing.
 
 ## 18. Evidence index
 
-| Review target                                    | Source                                                                              |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| Latest evidence and its limits                   | [EVIDENCE.md](EVIDENCE.md)                                                          |
-| Native adapter transactions and exact assertions | [latest-native.json](evidence/latest-native.json)                                   |
-| EVM execution status                             | [Incomplete attempt](evidence/runs/2026-09-26T16-09-20-105Z-evm.json)               |
-| Fresh public network snapshots                   | [latest-reads.json](evidence/latest-reads.json)                                     |
-| Original runs, including incomplete runs         | [evidence/runs](evidence/runs/)                                                     |
-| Historical failures and explanations             | [NOTES-failures.md](NOTES-failures.md)                                              |
-| Automated checks on main                         | [Quality workflow](https://github.com/timix648/preflight/actions/workflows/ci.yaml) |
+| Review target | Source |
+| --- | --- |
+| Latest evidence and its limits | [EVIDENCE.md](EVIDENCE.md) |
+| Native adapter transactions and exact assertions | [latest-native.json](evidence/latest-native.json) |
+| EVM execution status | [latest-evm.json](evidence/latest-evm.json) |
+| Fresh public network snapshots | [latest-reads.json](evidence/latest-reads.json) |
+| Original runs, including incomplete runs | [evidence/runs](evidence/runs/) |
+| Historical failures and explanations | [NOTES-failures.md](NOTES-failures.md) |
+| Automated checks on main | [Quality workflow](https://github.com/timix648/preflight/actions/workflows/ci.yaml) |
 
 Start with the before/after transfer, then the failed batch rollback. These show
-the original failure, the onboarding fix, and atomicity. Fresh signed DEX delivery is still an evidence gap.
+the original failure, the onboarding fix, and atomicity. The EVM assertions also verify actual DEX delivery.
 
 ## 19. Licence and credits
 

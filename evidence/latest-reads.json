@@ -3,9 +3,9 @@
   "kind": "reads",
   "network": "testnet",
   "chainId": 296,
-  "startedAt": "2026-09-26T09:48:32.402Z",
+  "startedAt": "2026-09-26T17:38:58.290Z",
   "complete": true,
-  "sourceCommit": "1fafd9304be2b0f022f6aa64386a109006d395fd",
+  "sourceCommit": "088c0953c1846a27d5895c190a0c6681b6bc0b1f",
   "sourceFiles": {
     "packages/nextjs/lib/onboarding/association.ts": "25cdb5ca96d778c92e7a2b7e368505d8bfa475754e0f22606bb13a817d3ee27c",
     "packages/nextjs/lib/onboarding/sdk-executor.ts": "6b8c17f5d421d1731eb3c1e9ace6461db6629cda06ece57de26bca3b0f09ab95",
@@ -23,7 +23,7 @@
     {
       "name": "Hashio returned live testnet config",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:34.574Z",
+      "checkedAt": "2026-09-26T17:39:01.541Z",
       "details": {
         "version": "relay/0.79.0-rc4",
         "live": true,
@@ -37,7 +37,7 @@
     {
       "name": "Mirror/key adapter recognizes ED25519 and routes authorization to HAS",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:35.778Z",
+      "checkedAt": "2026-09-26T17:39:02.597Z",
       "details": {
         "accountId": "0.0.2",
         "evmAddress": "0x0000000000000000000000000000000000000002",
@@ -52,7 +52,7 @@
     {
       "name": "Finite slot count never exceeds its ceiling",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:36.286Z",
+      "checkedAt": "2026-09-26T17:39:03.011Z",
       "details": {
         "accountId": "0.0.10622718",
         "evmAddress": "0x0000000000000000000000000000000000a216fe",
@@ -67,25 +67,25 @@
     {
       "name": "Balance reconciliation has independent mirror and RPC readings",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:37.005Z",
+      "checkedAt": "2026-09-26T17:39:03.493Z",
       "details": {
         "mirror": {
-          "value": "3388371893372973056",
+          "value": "3388371072794973696",
           "source": "mirror-node",
-          "asOf": 1790416112,
+          "asOf": 1790444341,
           "mayBeStale": false
         },
         "rpc": {
-          "value": "3388371893372973302",
+          "value": "3388371072794973746",
           "source": "json-rpc",
-          "asOf": 1790416116,
+          "asOf": 1790444343,
           "mayBeStale": false
         },
         "agree": false,
         "preferred": {
-          "value": "3388371893372973302",
+          "value": "3388371072794973746",
           "source": "json-rpc",
-          "asOf": 1790416116,
+          "asOf": 1790444343,
           "mayBeStale": false
         },
         "explanation": "The mirror node and the relay disagree. This is normal shortly after a transfer: mirror-node balances come from a periodic file, while the relay reads live state. Showing the live value."
@@ -94,9 +94,9 @@
     {
       "name": "SaucerSwap returned live token metadata and activity",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:39.888Z",
+      "checkedAt": "2026-09-26T17:39:06.437Z",
       "details": {
-        "tokenCount": 617,
+        "tokenCount": 618,
         "decimalHistogram": [
           {
             "decimals": 0,
@@ -124,7 +124,7 @@
           },
           {
             "decimals": 6,
-            "count": 133
+            "count": 134
           },
           {
             "decimals": 7,
@@ -153,7 +153,7 @@
         ],
         "stats": {
           "swapTotal": 986777,
-          "tvlUsd": 935386.880546,
+          "tvlUsd": 943087.694092,
           "circulatingSauce": "981891377031000"
         }
       }
@@ -161,7 +161,7 @@
     {
       "name": "SAUCE: router quote has positive output and a lower slippage floor",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:40.588Z",
+      "checkedAt": "2026-09-26T17:39:07.346Z",
       "details": {
         "token": {
           "tokenId": "0.0.1183558",
@@ -186,7 +186,7 @@
     {
       "name": "CLXY: router quote has positive output and a lower slippage floor",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:41.168Z",
+      "checkedAt": "2026-09-26T17:39:08.192Z",
       "details": {
         "token": {
           "tokenId": "0.0.5365",
@@ -211,7 +211,7 @@
     {
       "name": "Deployed AssociationProbe reaches the live HTS precompile",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:43.911Z",
+      "checkedAt": "2026-09-26T17:39:09.408Z",
       "details": {
         "contract": "0x57631c41cDFB0ef2A7D4ef83b35c38558FA3e2D7",
         "token": "0.0.1183558",
@@ -222,8 +222,8 @@
     {
       "name": "Deployed probe recognizes long-zero addresses",
       "passed": true,
-      "checkedAt": "2026-09-26T09:48:44.467Z"
+      "checkedAt": "2026-09-26T17:39:09.946Z"
     }
   ],
-  "finishedAt": "2026-09-26T09:48:44.468Z"
+  "finishedAt": "2026-09-26T17:39:09.947Z"
 }

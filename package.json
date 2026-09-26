@@ -47,7 +47,9 @@
     "harness:validate": "hedera-harness validate",
     "harness:doctor": "hedera-harness doctor",
     "hardhat:test:ci": "yarn workspace @sh/hardhat test:ci",
-    "harness:tier35": "yarn workspace @sh/hardhat harness:tier35"
+    "harness:tier35": "yarn workspace @sh/hardhat harness:tier35",
+    "hardhat:evidence:reads": "yarn workspace @sh/hardhat evidence:reads",
+    "hardhat:evidence:render": "yarn workspace @sh/hardhat evidence:render"
   },
   "packageManager": "yarn@3.2.3",
   "devDependencies": {

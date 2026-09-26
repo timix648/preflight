@@ -1,215 +1,141 @@
-# Evidence
+# Fresh testnet evidence
 
-Every row is a real transaction on **Hedera testnet**, linked to HashScan so it
-can be checked rather than taken on trust. Reverted transactions here are
-**evidence, not defects** — they are the failure this template removes,
-captured on-chain.
+Signed native run completed **2026-09-26T16:09:52.475Z**. **Fresh EVM execution remains unverified.** The first submission was rejected by the relay for an insufficient gas price. The fee-selection fix has local tests, but has not been rerun on chain. Funding and refund work is stopped at the owner's request. Public read snapshots completed **2026-09-26T09:48:44.468Z**.
+All timestamps are UTC. These are new executions through the current adapters,
+not new labels on the earlier September 19–20 transactions.
 
-Regenerate the whole set with `yarn hardhat:evidence`.
+| Layer                | What is proved                                                                                                                       | Machine-readable record                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Native Hiero adapter | Four mechanisms, immediate/pending delivery, claim/reject/cancel, and atomic failure                                                 | [native](evidence/latest-native.json)                                 |
+| Shared EVM builders  | Locally tested; fresh signed association and swaps remain unverified                                                                 | [Incomplete attempt](evidence/runs/2026-09-26T16-09-20-105Z-evm.json) |
+| Read adapters        | Mirror account/key/slot reads, independent balances, live Hashio limits, SaucerSwap metadata/router quotes, and deployed probe calls | [reads](evidence/latest-reads.json)                                   |
 
-Deployer: [`0.0.10505627`](https://hashscan.io/testnet/account/0.0.10505627) ·
-Token: [`0.0.10620849`](https://hashscan.io/testnet/token/0.0.10620849) (OKE, **2 decimals**)
-
----
+The wallet funds a temporary testnet signer; the runner signs its fixtures in
+memory. This proves SDK/EVM payload execution, not a manual browser-wallet
+journey. The actual AcquireFlow component has a separate browser regression suite
+with mocked wallet/API boundaries. Those are different kinds of evidence.
 
 ## The pair that matters
 
-The same transfer, to the same account, 2.4 seconds apart. The only thing that
-changed between them is that the kit associated the token.
+Token **PFE 0.0.10727915**, **2 decimals**.
+Sender **0.0.10727914**, recipient **0.0.10727916**.
+The sender attempts the same 100-smallest-unit transfer before and after association.
+Elapsed consensus time: **11.464 seconds**; the UI derives this from the records.
 
-| | Transaction | Result | Tokens moved |
-| --- | --- | --- | --- |
-| **Before** | [`…092.918`](https://hashscan.io/testnet/transaction/0.0.10505627-1789836087-477565839) | **`TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`** | **none** |
-| *The kit acts* | [`…093.938`](https://hashscan.io/testnet/transaction/0.0.10505627-1789836088-273241870) | `SUCCESS` — association | — |
-| **After** | [`…095.284`](https://hashscan.io/testnet/transaction/0.0.10505627-1789836090-275408686) | `SUCCESS` | `0.0.10505627: −100` → `0.0.10620850: +100` |
+| Step         | Result                                                | Public proof                                                                                    |
+| ------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Before       | TOKEN_NOT_ASSOCIATED_TO_ACCOUNT; zero token transfers | [failed transfer](https://hashscan.io/testnet/transaction/0.0.10727914-1790416730-714923658)    |
+| Adapter acts | SUCCESS; recipient-paid explicit association          | [association](https://hashscan.io/testnet/transaction/0.0.10727916-1790416739-072577022)        |
+| After        | SUCCESS; 100 smallest units delivered                 | [identical transfer](https://hashscan.io/testnet/transaction/0.0.10727914-1790416742-762508366) |
 
-The failed transfer has **zero** token transfers attached: nothing moved, and
-the sender still paid the fee. That is the entire problem this template exists
-to remove, and it is the first thing a developer hits on Hedera.
-
----
+The failure moved no tokens. The native adapter selected explicit association
+because the recipient could sign and pay, and no atomic batch was requested.
+Association alone did not deliver the token; the subsequent transfer did.
 
 ## All four paths, in consensus order
 
-| # | What it proves | Service | Result | Link |
-| --- | --- | --- | --- | --- |
-| 1 | HTS token created — **2 decimals**, deliberately not 8 | HTS | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836085-532299932) |
-| 2 | Recipient created with **zero** auto-association slots (`0.0.10620850`) | HIP-23 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836082-989962081) |
-| 3 | **A transfer that correctly FAILS** — nothing moves | HTS | **`TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`** | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836087-477565839) |
-| 4 | **Path 1** — explicit association | HTS | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836088-273241870) |
-| 5 | **The SAME transfer SUCCEEDING** after the kit handled it | HTS | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836090-275408686) |
-| 6 | Recipient created with unlimited slots (`0.0.10620854`) | HIP-23 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836089-100416471) |
-| 7 | **Path 2** — auto-slot consumed on arrival, **zero approvals** | HIP-23 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836092-919819020) |
-| 8 | Airdrop recipient created, zero slots (`0.0.10620855`) | HIP-23 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836091-023808970) |
-| 9 | **Path 3** — HIP-904 airdrop, **sender** pays. Moves nothing: it is pending | HIP-904 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836095-256339668) |
-| 10 | Path 3 — recipient **CLAIMS**. *This* is what moves the tokens | HIP-904 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836093-628534669) |
-| 11 | Path 3 — recipient **REJECTS** and hands the token back | HIP-904 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836096-561225275) |
-| 12 | Airdrop recipient for the cancel case (`0.0.10620857`) | HIP-23 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836097-273509768) |
-| 13 | Path 3 — **sender CANCELS** a pending airdrop before it is claimed | HIP-904 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836099-666004205) |
-| 14 | Second token for the batch run (`0.0.10620972`) | HTS | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836955-348592241) |
-| 15 | Batch recipient created, zero slots (`0.0.10620973`) | HIP-23 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836959-744812307) |
-| 16 | **Path 4** — HIP-551 atomic associate + transfer, **one approval** | HIP-551 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836958-700023220) |
-| 17 | ↳ inner 1 — the association, paid by the **recipient** | HIP-551 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10620973-1789836958-708578860) |
-| 18 | ↳ inner 2 — the transfer, paid by the **sender** | HIP-551 | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836957-767192698) |
+Each row below was independently read back from the mirror node. Expected failures
+are intentional negative tests; an unexpected success fails the evidence run.
+Fixture setup is labelled separately from adapter execution. Child batch rows have
+a parent consensus timestamp matching their outer batch.
 
-### What the transfer counts show
+| Operation                                          | Consensus result                  | Consensus timestamp    | Proof                                                                                    |
+| -------------------------------------------------- | --------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| Create isolated two-decimal evidence token         | `SUCCESS`                         | `1790416729.563354196` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416718-876227842) |
+| Create explicit association fixture                | `SUCCESS`                         | `1790416734.606684104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416728-289757222) |
+| Before: unassociated transfer                      | `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT` | `1790416739.759866188` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416730-714923658) |
+| Native adapter: explicit association               | `SUCCESS`                         | `1790416746.183871104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727916-1790416739-072577022) |
+| After: identical transfer                          | `SUCCESS`                         | `1790416751.223717030` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416742-762508366) |
+| Create existing finite auto-slot fixture           | `SUCCESS`                         | `1790416759.205475302` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416751-690533045) |
+| Existing auto-slot: delivery                       | `SUCCESS`                         | `1790416764.187202104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416758-670208229) |
+| Create raise auto-slot limit fixture               | `SUCCESS`                         | `1790416768.625746280` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416760-563692524) |
+| Native adapter: raise automatic slots              | `SUCCESS`                         | `1790416772.940023357` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727923-1790416763-409639538) |
+| Raised auto-slot: delivery                         | `SUCCESS`                         | `1790416777.147118603` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416767-257097931) |
+| Create pending airdrop and claim fixture           | `SUCCESS`                         | `1790416784.340373104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416775-920624087) |
+| Native adapter: pending airdrop                    | `SUCCESS`                         | `1790416788.780026366` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416782-129345848) |
+| Native adapter: claim pending airdrop              | `SUCCESS`                         | `1790416794.547270236` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727931-1790416786-790731496) |
+| Native adapter: reject held token                  | `SUCCESS`                         | `1790416801.380189104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727931-1790416795-783954793) |
+| Create pending airdrop cancellation fixture        | `SUCCESS`                         | `1790416805.400165108` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416795-926398331) |
+| Native adapter: airdrop before cancellation        | `SUCCESS`                         | `1790416810.147516068` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416803-834330998) |
+| Native adapter: cancel pending airdrop             | `SUCCESS`                         | `1790416815.486537117` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416807-576938000) |
+| Native adapter: immediate airdrop delivery         | `SUCCESS`                         | `1790416821.665287834` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416814-554881035) |
+| Create atomic batch fixture                        | `SUCCESS`                         | `1790416827.006591366` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790416819-576489616) |
+| Native adapter: atomic batch                       | `SUCCESS`                         | `1790416832.825372639` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727942-1790416826-614589144) |
+| Batch child: TokenAssociateTransaction             | `SUCCESS`                         | `1790416832.825372640` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727942-1790416822-844025493) |
+| Batch child: TransferTransaction                   | `SUCCESS`                         | `1790416832.825372641` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727942-1790416826-446138345) |
+| Create atomic rollback fixture                     | `SUCCESS`                         | `1790438949.008567960` | [transaction](https://hashscan.io/testnet/transaction/0.0.10727914-1790438942-403213632) |
+| Native adapter: intentionally failing atomic batch | `INNER_TRANSACTION_FAILED`        | `1790438954.408346104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10731737-1790438948-537993321) |
 
-Read the `token_transfers` on rows 9 and 10 together. The **airdrop moves
-nothing** — it creates a pending airdrop. The **claim** is what actually
-transfers the tokens. That is HIP-904's whole design visible on-chain: the
-sender commits and pays, and the recipient decides later, without ever needing
-HBAR or a prior association.
+### Semantics the tests check
 
-Row 13 is absent from most write-ups of HIP-904. A sender can withdraw a
-pending airdrop that was never claimed, which matters if you airdrop to the
-wrong address.
+- An existing auto-slot causes no adapter transaction or signing request. Receipt
+  of the transfer creates the automatic relationship.
+- Raising slots submits a real AccountUpdateTransaction. Readiness is true, but
+  association stays false until a token arrives.
+- A pending airdrop is not an association. Claim performs delivery; its payer must
+  be funded. Reject returns a held token. Cancel removes a pending entry.
+- The adapter reads the airdrop transaction record to distinguish immediate delivery.
+- The native batch has recipient-paid inner association and transfer operations;
+  the sender also authorizes the transfer. This adapter's payer policy differs
+  from the older hand-built demonstration. Wallet prompt count is signer-dependent.
+- A deliberately oversized batch transfer fails, and no association remains.
 
-### What atomicity looks like on-chain
+## EVM acquisition through the shared builders
 
-Rows 16–18 are one unit. The mirror node shows all three at consecutive
-**nanoseconds**, with both inner transactions nested under the batch:
+No fresh successful signed EVM transaction is claimed. The relay rejected the first association before submission: ethers selected 218 weibar against a reported minimum of 1,140,000,000,000 weibar. The runner now requests eth_gasPrice and explicitly applies legacy pricing with 10% headroom. Local tests cover the fee selection and safe error reporting. Historical September swap proofs remain in Git history; they do not validate this refreshed builder implementation.
 
-```
-1789836965.486023845  ATOMICBATCH      payer 0.0.10505627
-1789836965.486023846  TOKENASSOCIATE   payer 0.0.10620973   parent = ...845
-1789836965.486023847  CRYPTOTRANSFER   payer 0.0.10505627   parent = ...845
-                                       tokens  -100 -> +100
-```
+## Fresh public read snapshots
 
-Two details worth reading twice.
+| Assertion                                                             | Result |
+| --------------------------------------------------------------------- | ------ |
+| Hashio returned live testnet config                                   | Passed |
+| Mirror/key adapter recognizes ED25519 and routes authorization to HAS | Passed |
+| Finite slot count never exceeds its ceiling                           | Passed |
+| Balance reconciliation has independent mirror and RPC readings        | Passed |
+| SaucerSwap returned live token metadata and activity                  | Passed |
+| SAUCE: router quote has positive output and a lower slippage floor    | Passed |
+| CLXY: router quote has positive output and a lower slippage floor     | Passed |
+| Deployed AssociationProbe reaches the live HTS precompile             | Passed |
+| Deployed probe recognizes long-zero addresses                         | Passed |
 
-The inner transactions carry **different payers**. The recipient paid for its
-own association; the sender paid for the transfer. That is HIP-551's real
-value — not just one approval, but one approval over transactions with
-*different fee payers* that either all land or none do.
+The JSON snapshot contains the actual values and observation times. Prices,
+activity counts, balances, and slot availability are snapshots, not permanent promises.
 
-And there is no window. Compare rows 3–5, where the association and the
-transfer are separate transactions a second apart: anything failing in between
-leaves an account that has paid for an association it never used. Here that
-gap does not exist, because it is measured in nanoseconds inside a single
-consensus event.
+## Deployed contract provenance
 
----
+The existing [AssociationProbe 0.0.10620620](https://hashscan.io/testnet/contract/0.0.10620620)
+was called again in the read run. Its deployment is historical; this refresh did
+not redeploy it. The earlier source-verification result applies to its original
+published source. Correcting a NatSpec author comment changes local compilation
+metadata, so this document does not claim a fresh exact-source verification of
+the edited source against that old deployment.
 
-## Contracts
+## Reproduce and verify
 
-| What it proves | Link |
-| --- | --- |
-| `AssociationProbe` live and source-verified | [`0.0.10620620`](https://hashscan.io/testnet/contract/0.0.10620620) · [Sourcify `exact_match`](https://repo.sourcify.dev/contracts/full_match/296/0x57631c41cDFB0ef2A7D4ef83b35c38558FA3e2D7/) |
-| Deploy transaction, 726,927 gas | [`0x48830747…b544ee`](https://hashscan.io/testnet/transaction/0x48830747afe6070ce4d1dc4ddda19a7913684d16c988b3b87501ece83bb544ee) |
-| The **broken** predecessor, also verified so the diff is readable | [`0.0.10620483`](https://hashscan.io/testnet/contract/0.0.10620483) · [Sourcify `exact_match`](https://repo.sourcify.dev/contracts/full_match/296/0x5be7aAD2cC81C721e595406399da30f7B68BCf62/) |
+Run `yarn hardhat:evidence:reads` for public snapshots, then
+`yarn hardhat:evidence --browser` for a wallet-funded native + EVM run, or
+`yarn hardhat:evidence --evm` to use the local encrypted keystore.
+After all reports complete, run `yarn hardhat:evidence:render` to regenerate
+this page, the README's proof summary, and the homepage's three-beat data.
+Use `yarn hardhat:evidence:render --native-only` to publish completed native/read
+proofs with the EVM gap stated explicitly. Neither render command sends transactions.
 
-### Two contracts, one line apart
+Every report contains the source commit and core-file SHA-256 hashes. Original
+runs are retained under `evidence/runs/`; incomplete runs never replace a latest
+successful report. Public transaction IDs and consensus results can be independently
+checked via HashScan or the testnet mirror API. Client transaction-ID timestamps
+are not consensus timestamps; chronology above uses the latter.
 
-Both are source-verified, so the difference can be read on-chain:
+## Funding and remaining validation
 
-| | `0.0.10620483` | `0.0.10620620` |
-| --- | --- | --- |
-| Guard | `target.code.length == 0` | `block.chainid` |
-| `inspectToken(SAUCE)` | **reverts** `SystemContractUnreachable(0x167)` | `isHtsToken=true, isFungible=true` |
-| Local tests | 17 passing | 17 passing |
+The native report lists fixture funding recovery and the return of unused HBAR.
+A small reserve is left in each fixture; transaction fees are consumed.
+Any cleanup error is recorded explicitly.
+The completed refund returned 15.11924709 test HBAR; no further funding or refund
+work is in progress. The earlier memory-only attempt left 39.99871842 test HBAR
+in an inaccessible signer after cleanup failed. See the retained
+[incident audit](evidence/runs/2026-09-26T09-13-26-977Z-native.json).
 
-Hedera's system contracts are precompiles, so `extcodesize` reports **zero**
-for them inside the EVM. Both versions passed identical local suites; only one
-works on the network it was written for. Write-up in
-[`NOTES-failures.md`](NOTES-failures.md) #16.
-
-Verifying them needed a workaround — `yarn hardhat:verify:testnet` is broken
-because Sourcify retired the V1 API the bundled plugin calls. Use
-`yarn hardhat:verify:sourcify <address>`, and see #17.
-
-### Calls into the real HTS precompile
-
-Read back from `0.0.10620620` — Solidity calling `0x167`:
-
-```
-inspectToken(SAUCE  0.0.1183558) -> isHtsToken=true   isFungible=true
-inspectToken(USDC   0.0.5449)    -> isHtsToken=true   isFungible=true
-inspectToken(WHBAR  0.0.15058)   -> isHtsToken=true   isFungible=true
-inspectToken(the probe itself)   -> isHtsToken=false  isFungible=false
-```
-
----
-
-## Ecosystem, no credentials required
-
-| What it proves | How to re-run |
-| --- | --- |
-| SaucerSwap V1 router quotes a live swap | `getAmountsOut(1 HBAR, [WHBAR, SAUCE])` on [`0.0.19264`](https://hashscan.io/testnet/contract/0.0.19264) → 55.098662 SAUCE |
-| Router and price feed diverge by 12.6%, and it is not slippage | `yarn workspace @sh/nextjs test:live` |
-| The relay paymaster really is disabled | `curl -s https://testnet.hashio.io/config \| grep PAYMASTER` |
-| 587 tokens across 13 decimal scales | the histogram on `/` |
-
----
-
-## A note on reading these links
-
-A Hedera transaction id (`0.0.10505627@1789836087.477565839`) carries the
-timestamp the **client** assigned when it built the transaction, not when the
-network reached consensus. Under concurrency those ids are not in chronological
-order — rows 9 and 10 above look reversed by id. The table is ordered by
-**consensus timestamp**, which is the network's own ordering and the only one
-that means anything.
-
-## The browser journey, end to end
-
-Signed in a browser with an EVM wallet (OKX) on `0.0.10474072`, 20 September
-2026. Two different tokens, each associated and then acquired on the live DEX.
-
-| # | What it proves | Result | Link |
-| --- | --- | --- | --- |
-| 19 | Explicit association of SAUCE, signed in the UI | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.7314364-1789930492-934015409) |
-| 20 | **SAUCE acquired on SaucerSwap** through RouterV3 `0.0.19264` | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.7314364-1789930509-902591374) |
-| 21 | Explicit association of CLXY, a second token | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.7314364-1789933935-912556937) |
-| 22 | **CLXY acquired**, proving the journey is not token-specific | `SUCCESS` | [tx](https://hashscan.io/testnet/transaction/0.0.7314364-1789933958-462833689) |
-
-### The quote was not approximately right, it was exactly right
-
-The router quoted these amounts before signing; the mirror node reports these
-balances after. They agree to the last digit, which is the claim `/acquire`
-makes about quoting from the router rather than the price feed:
-
-| Token | Quoted | Held now | Decimals |
-| --- | --- | --- | --- |
-| SAUCE `0.0.1183558` | 54.961799 | **54.961799** | 6 |
-| CLXY `0.0.5365` | 51.240166 | **51.240166** | 6 |
-
-Neither is 8dp or 18dp. Code that assumes either is wrong about both, and
-wrong silently — the amount still looks plausible.
-
-### Both associations were explicit, and that is the interesting part
-
-The mirror node reports `automatic_association: false` for both tokens. The
-signing account accepts **unlimited** automatic associations, so the transfer
-would have associated them on arrival by itself. The kit associated first
-anyway, because the alternative is trusting that every downstream path agrees
-about slot state — and `/diagnose` exists precisely because that assumption is
-where accounts get it wrong.
-
-### What association actually costs
-
-| Step | Gas limit | Charged |
-| --- | --- | --- |
-| Association (HTS precompile `0x167`) | 800,000 | **0.79 HBAR** |
-| Swap (RouterV3) | 1,200,000 | **0.16 HBAR** |
-
-The association costs five times the swap despite the lower gas limit: HTS
-precompile calls carry a fixed HAPI-equivalent price that dwarfs execution
-gas. This is the whole reason the choice of mechanism matters. Association is
-not free, so *who pays* is a real question — which is what HIP-904 airdrop
-answers by putting the cost on the sender.
-
-## Still outstanding
-
-All four association mechanisms and the earlier browser journey are captured
-above. These transactions predate the reusable SDK executor added on September
-25; they prove the mechanisms, not a live run of that new adapter. Its offline
-tests serialize real SDK transactions and mock only network submission.
-
-Remaining release validation:
-
-| What it needs | Blocked on |
-| --- | --- |
-| Clean-machine `npm create scaffold-hbar` check (gate item G1) | The repository being public |
-| Fresh live execution through the reusable SDK adapter | A caller-supplied funded testnet signer; record new transaction ids rather than relabelling the historical evidence |
-| Optional Harness Tier 3.5 chain validation | The spec has `validator.enabled` and `contract`; a billed semantic agent run and funded signer are still required |
+This evidence does not certify mainnet operation, audit token-specific restrictions,
+or replace a clean-machine scaffold installation or a fresh full harness gate.
+It does not claim CLPR integration or a new manual browser-wallet demo.

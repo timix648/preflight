@@ -1,392 +1,362 @@
 /**
- * Generate the evidence in EVIDENCE.md against real Hedera testnet.
- *
- * Exercises all four association paths end to end and prints a markdown table
- * of HashScan links ready to paste. One password prompt covers the whole run.
- *
- * ---------------------------------------------------------------------------
- * WHY IT CREATES ITS OWN ACCOUNTS
- *
- * The headline evidence is a transfer that FAILS with
- * TOKEN_NOT_ASSOCIATED_TO_ACCOUNT beside the same transfer succeeding once the
- * kit has handled it. That needs a recipient with ZERO free automatic
- * association slots.
- *
- * Accounts created through portal.hedera.com now default to
- * maxAutomaticTokenAssociations = -1 (unlimited), so they can never produce
- * that error. Both accounts available when this was written had -1.
- *
- * The error is far from obsolete — a scan of 100 recent testnet accounts found
- * ~65% with zero slots (every ED25519 and threshold-key account) — but you
- * cannot rely on being handed one. So this script creates the accounts it
- * needs, with slot counts chosen deliberately, all keyed to the operator so a
- * single key can sign the entire sequence.
- * ---------------------------------------------------------------------------
- *
- * Usage:
- *   yarn hardhat:evidence          every path (~30 HBAR)
- *   yarn hardhat:evidence batch    only the HIP-551 batch (~10 HBAR)
- *
- * The subset exists so a single missing path can be captured without paying to
- * redo the others.
- *
- * Costs a few HBAR. Testnet only — it refuses to run against mainnet.
+ * Signed testnet evidence through Preflight's actual native SDK adapter.
+ * `yarn hardhat:evidence`: local keystore prompt; about 30-40 test HBAR required.
+ * Fixtures use the operator's key, 3 HBAR each, and a new two-decimal token.
+ * A successful run records verified transactions in evidence/latest-native.json.
+ * Incomplete runs retain their public transaction IDs but never replace latest.
  */
 import * as dotenv from "dotenv";
-dotenv.config();
+import assert from "node:assert/strict";
 import { Wallet } from "ethers";
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 import password from "@inquirer/password";
 import {
   AccountCreateTransaction,
-  AccountId,
-  BatchTransaction,
   Client,
   Hbar,
-  PendingAirdropId,
   PrivateKey,
-  TokenAirdropTransaction,
-  TokenAssociateTransaction,
-  TokenCancelAirdropTransaction,
-  TokenClaimAirdropTransaction,
   TokenCreateTransaction,
-  TokenId,
-  TokenRejectTransaction,
-  TransactionId,
+  Transaction,
   TransferTransaction,
 } from "@hiero-ledger/sdk";
+import { ensureAssociated, type StrategyContext } from "../../nextjs/lib/onboarding/association";
+import { createHieroAssociationExecutor } from "../../nextjs/lib/onboarding/sdk-executor";
+import { getAccount, getPendingAirdrops, getTokenRelationship } from "../../nextjs/lib/onboarding/mirror";
+import { ROOT, indexed, mirror, newReport, evidenceError } from "./evidenceSupport";
+import { browserEvidenceSigner } from "./browserEvidenceSigner";
+import { generateEvmEvidence } from "./generateEvmEvidence";
+import { sweepFixtureFunding, refundEvidenceWallet } from "./evidenceRecovery";
+import { resumeEvidence } from "./resumeEvidence";
 
-const NETWORK = "testnet";
-const EXPLORER = `https://hashscan.io/${NETWORK}`;
+dotenv.config();
+const context: StrategyContext = {
+  alreadyAssociated: false,
+  freeAutoSlots: 0,
+  recipientCanSign: true,
+  recipientHasHbarForFees: true,
+  senderControlsRecipient: false,
+  preferSingleApproval: false,
+  batchSupported: true,
+};
 
-interface Evidence {
-  what: string;
-  service: string;
-  txId: string;
-  status: string;
-  /** True when the transaction was SUPPOSED to fail. */
-  expectedFailure?: boolean;
-}
-
-const collected: Evidence[] = [];
-
-/** "0.0.123@1758.900" -> "0.0.123-1758-900", which is what HashScan wants. */
-function hashscanTx(txId: string): string {
-  return `${EXPLORER}/transaction/${txId.replace("@", "-").replace(/\.(\d+)$/, "-$1")}`;
-}
-
-function record(what: string, service: string, txId: string, status: string, expectedFailure = false) {
-  collected.push({ what, service, txId, status, expectedFailure });
-  const mark = expectedFailure ? "EXPECTED FAIL" : "ok";
-  console.log(`  [${mark}] ${what}`);
-  console.log(`           ${status}  ${hashscanTx(txId)}`);
-}
-
-/**
- * Run something that is expected to FAIL, and capture its transaction id.
- *
- * A failed Hedera transaction still reaches consensus and still has a record,
- * which is exactly why it works as evidence. The SDK surfaces the status on
- * the thrown error rather than returning it.
- */
-async function expectFailure(
-  what: string,
-  service: string,
-  wantStatus: string,
-  run: () => Promise<unknown>,
-): Promise<void> {
-  try {
-    await run();
-    console.log(`  [!!] ${what} was supposed to fail with ${wantStatus} and did not.`);
-    console.log(`       The recipient probably has free auto-association slots.`);
-  } catch (error: any) {
-    const status = String(error?.status ?? "");
-    const txId = String(error?.transactionId ?? "");
-    if (!status.includes(wantStatus)) {
-      throw new Error(`${what}: expected ${wantStatus}, got ${status || error?.message}`);
-    }
-    record(what, service, txId, status, true);
+function failureDetails(error: any): { status: string; id: string; phase: "precheck" | "consensus" } {
+  for (let e = error, depth = 0; e && depth < 8; e = e.cause, depth++) {
+    if (e.transactionId && e.status)
+      return {
+        id: String(e.transactionId),
+        status: String(e.status),
+        phase: e.constructor?.name === "PrecheckStatusError" ? "precheck" : "consensus",
+      };
   }
+  throw new Error("Failure has no consensus transaction ID; it cannot be used as chain evidence.");
 }
 
 async function main() {
-  const encrypted = process.env.DEPLOYER_PRIVATE_KEY_ENCRYPTED;
-  if (!encrypted) {
-    console.log("No deployer account. Run `yarn hardhat:account:import` first.");
+  if (process.argv.includes("--help")) {
+    console.log(
+      "yarn hardhat:evidence: native adapter paths; add --browser for wallet-funded native + EVM evidence with an encrypted recovery signer, or --evm with the local keystore. Requires about 40 test HBAR. --browser --refund retries cleanup only. Enter recovery passwords locally; never in chat.",
+    );
     return;
   }
-
-  const pass = await password({ message: "Enter password to decrypt private key:" });
-  const wallet = await Wallet.fromEncryptedJson(encrypted, pass);
-  const operatorKey = PrivateKey.fromStringECDSA(wallet.privateKey);
-
-  // Resolve the operator's account id from its EVM address. The mirror node is
-  // the only thing that knows this mapping — a key-derived address cannot be
-  // converted locally (see lib/onboarding/address.ts).
-  const lookup = await fetch(`https://${NETWORK}.mirrornode.hedera.com/api/v1/accounts/${wallet.address}`).then(
-    r => r.json() as any,
-  );
-  const operatorId = AccountId.fromString(lookup.account);
-
-  console.log(`\nOperator ${operatorId.toString()} (${wallet.address})`);
-  console.log(`Balance  ${(Number(lookup.balance?.balance ?? 0) / 1e8).toFixed(2)} HBAR\n`);
-
-  const client = Client.forTestnet().setOperator(operatorId, operatorKey);
-  client.setDefaultMaxTransactionFee(new Hbar(20));
-
-  // `yarn hardhat:evidence batch` captures only the HIP-551 path. The token is
-  // always created because every path needs one.
-  const only = (process.argv[2] ?? "").toLowerCase();
-  const runAll = only === "" || only === "all";
-  if (!runAll && only !== "batch") {
-    throw new Error(`Unknown subset "${only}". Use no argument, "all", or "batch".`);
+  const browserMode = process.argv.includes("--browser");
+  if (process.argv.includes("--resume")) {
+    assert.ok(browserMode && !process.argv.includes("--refund"), "Use --browser --resume by itself");
+    return resumeEvidence();
   }
-  if (!runAll)
-    console.log(`Running the "${only}" subset only.
-`);
-
+  const refundOnly = process.argv.includes("--refund");
+  if (refundOnly && !browserMode)
+    throw new Error("Refund mode requires --browser and its existing encrypted recovery signer.");
+  const browser = browserMode ? await browserEvidenceSigner() : null;
+  const wallet =
+    browser?.wallet ??
+    (await (async () => {
+      const encrypted = process.env.DEPLOYER_PRIVATE_KEY_ENCRYPTED;
+      if (!encrypted) throw new Error("Use --browser or import a funded testnet ECDSA signer first.");
+      const pass = await password({
+        message: "Unlock the local testnet keystore (never share this password in chat):",
+      });
+      return Wallet.fromEncryptedJson(encrypted, pass);
+    })());
+  const key = PrivateKey.fromStringECDSA(wallet.privateKey);
+  const account = await indexed(
+    () => mirror(`/accounts/${wallet.address}`),
+    a => (refundOnly ? !!a.account : Number(a.balance?.balance) >= 35e8),
+  );
+  const operator = String(account.account);
+  if (!refundOnly)
+    assert.ok(
+      Number(account.balance?.balance) >= 35e8,
+      "Fund the testnet signer with at least 40 HBAR before this run.",
+    );
+  console.log(`Testnet only. Operator ${operator}; native fixture funding is 3 HBAR per account.`);
+  const evidence = newReport("native");
+  evidence.report.operator = operator;
+  evidence.report.walletAddress = wallet.address;
+  const client = Client.forTestnet().setOperator(operator, key);
+  // Preserve the SDK's per-transaction defaults (TokenCreate uses 30 HBAR).
+  // A global 5-HBAR override previously made token creation fail on testnet.
+  const signed: { id: string; type: string }[] = [];
+  const executor = createHieroAssociationExecutor({
+    client,
+    batch: { supported: true, key: key.publicKey },
+    sign: async (tx, request) => {
+      // All fixtures deliberately share this key. Production integrations must
+      // route each requested account and batch key to its actual signer.
+      for (const id of request.accounts) assert.ok(id === operator || evidence.report.fixtures?.includes(id));
+      signed.push({ id: String(tx.transactionId), type: tx.constructor.name });
+      return tx.sign(key);
+    },
+  });
+  const submit = async (label: string, tx: Transaction) => {
+    const response = await tx.execute(client);
+    evidence.report.submissions ??= [];
+    evidence.report.submissions.push({ label, transactionId: response.transactionId.toString() });
+    evidence.save();
+    const receipt = await response.getReceipt(client);
+    await evidence.transaction(label, response.transactionId.toString());
+    return receipt;
+  };
+  const expectedFailure = async (label: string, wanted: string, run: () => Promise<unknown>) => {
+    let caught: unknown;
+    try {
+      await run();
+    } catch (error) {
+      caught = error;
+    }
+    assert.ok(caught, `${label}: expected ${wanted}, but the transaction succeeded`);
+    const failed = failureDetails(caught);
+    assert.equal(failed.phase, "consensus", "Expected failures must reach consensus to count as live evidence");
+    assert.equal(failed.status, wanted, label);
+    return evidence.transaction(label, failed.id, wanted);
+  };
   try {
-    // ---------------------------------------------------------------- token
-    console.log("Creating the token this evidence moves around...");
-    const tokenReceipt = await (
+    if (refundOnly) {
+      const priorFixtures = readdirSync(path.join(ROOT, "evidence/runs"))
+        .filter(name => name.endsWith("-native.json"))
+        .map(name => JSON.parse(readFileSync(path.join(ROOT, "evidence/runs", name), "utf8")))
+        .filter(report => report.walletAddress === wallet.address && report.network === "testnet")
+        .flatMap(report => report.fixtures ?? []);
+      evidence.report.fixtures = [...new Set(priorFixtures)];
+      return; // Finally performs cleanup only; never creates new fixtures.
+    }
+    const token = await submit(
+      "Create isolated two-decimal evidence token",
       await new TokenCreateTransaction()
-        .setTokenName("Onboarding Kit Evidence")
-        .setTokenSymbol("OKE")
+        .setTokenName("Preflight Adapter Evidence")
+        .setTokenSymbol("PFE")
         .setDecimals(2)
         .setInitialSupply(100_000)
-        .setTreasuryAccountId(operatorId)
-        .setAdminKey(operatorKey.publicKey)
-        .setSupplyKey(operatorKey.publicKey)
+        .setTreasuryAccountId(operator)
+        .setAdminKey(key.publicKey)
         .freezeWith(client)
-        .sign(operatorKey)
-    ).execute(client);
-    const created = await tokenReceipt.getReceipt(client);
-    const tokenId = created.tokenId as TokenId;
-    record(
-      `HTS token created (${tokenId.toString()}, 2 decimals)`,
-      "HTS",
-      tokenReceipt.transactionId.toString(),
-      String(created.status),
+        .sign(key),
     );
-
-    /** Create an account keyed to the operator, with a chosen slot count. */
-    async function makeAccount(label: string, slots: number): Promise<AccountId> {
-      const response = await new AccountCreateTransaction()
-        .setKeyWithoutAlias(operatorKey.publicKey)
-        .setInitialBalance(new Hbar(5))
-        .setMaxAutomaticTokenAssociations(slots)
-        .execute(client);
-      const receipt = await response.getReceipt(client);
-      const id = receipt.accountId as AccountId;
-      record(
-        `${label} created (${id.toString()}, ${slots === -1 ? "unlimited" : slots} auto-slots)`,
-        "HTS / HIP-23",
-        response.transactionId.toString(),
-        String(receipt.status),
+    assert.ok(token.tokenId);
+    const tokenId = token.tokenId.toString();
+    evidence.report.token = { id: tokenId, symbol: "PFE", decimals: 2 };
+    evidence.report.fixtures = [];
+    const makeAccount = async (label: string, slots = 0) => {
+      // Completed fixtures no longer need their initial fee float. Recycle it
+      // before allocating the next fixture instead of stranding the run's budget.
+      await sweepFixtureFunding(client, key, operator, evidence);
+      const receipt = await submit(
+        `Create ${label} fixture`,
+        new AccountCreateTransaction()
+          .setKeyWithoutAlias(key.publicKey)
+          .setInitialBalance(new Hbar(3))
+          .setMaxAutomaticTokenAssociations(slots),
       );
+      assert.ok(receipt.accountId);
+      const id = receipt.accountId.toString();
+      evidence.report.fixtures.push(id);
+      evidence.save();
       return id;
-    }
-
-    // Paths 1-3. Skipped when a subset was requested, so a single missing
-    // path can be captured without paying to redo the ones that landed.
-    if (runAll) {
-      // ------------------------------------------------- the headline pair
-      console.log("\nThe pair that matters: the same transfer, failing then succeeding.");
-      const slotless = await makeAccount("Recipient with NO free slots", 0);
-
-      await expectFailure(
-        "A transfer that correctly FAILS — recipient cannot hold the token",
-        "HTS",
-        "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT",
-        async () => {
-          const response = await new TransferTransaction()
-            .addTokenTransfer(tokenId, operatorId, -100)
-            .addTokenTransfer(tokenId, slotless, 100)
-            .execute(client);
-          return (await response.getReceipt(client)).status;
-        },
-      );
-
-      // Path 1 — explicit association. The recipient signs; here the operator
-      // holds its key, so one signature covers it.
-      const assocResponse = await (
-        await new TokenAssociateTransaction()
-          .setAccountId(slotless)
-          .setTokenIds([tokenId])
-          .freezeWith(client)
-          .sign(operatorKey)
-      ).execute(client);
-      record(
-        "Path 1 — explicit association (TokenAssociateTransaction)",
-        "HTS",
-        assocResponse.transactionId.toString(),
-        String((await assocResponse.getReceipt(client)).status),
-      );
-
-      const successResponse = await new TransferTransaction()
-        .addTokenTransfer(tokenId, operatorId, -100)
-        .addTokenTransfer(tokenId, slotless, 100)
-        .execute(client);
-      record(
-        "The SAME transfer SUCCEEDING once the kit handled association",
-        "HTS",
-        successResponse.transactionId.toString(),
-        String((await successResponse.getReceipt(client)).status),
-      );
-
-      // ------------------------------------------------- path 2, auto-slot
-      console.log("\nPath 2 — HIP-23 automatic association.");
-      const autoSlot = await makeAccount("Recipient with unlimited slots", -1);
-      const autoResponse = await new TransferTransaction()
-        .addTokenTransfer(tokenId, operatorId, -100)
-        .addTokenTransfer(tokenId, autoSlot, 100)
-        .execute(client);
-      record(
-        "Path 2 — auto-association slot consumed on arrival, no approval",
-        "HTS / HIP-23",
-        autoResponse.transactionId.toString(),
-        String((await autoResponse.getReceipt(client)).status),
-      );
-
-      // ------------------------------------------------- path 3, airdrop
-      console.log("\nPath 3 — HIP-904 airdrop, where the SENDER pays.");
-      const claimer = await makeAccount("Airdrop recipient, no free slots", 0);
-
-      const airdropResponse = await new TokenAirdropTransaction()
-        .addTokenTransfer(tokenId, operatorId, -100)
-        .addTokenTransfer(tokenId, claimer, 100)
-        .execute(client);
-      const airdropReceipt = await airdropResponse.getReceipt(client);
-      record(
-        "Path 3 — airdrop to an account that cannot hold the token yet (becomes pending)",
-        "HTS / HIP-904",
-        airdropResponse.transactionId.toString(),
-        String(airdropReceipt.status),
-      );
-
-      const pendingId = new PendingAirdropId({
-        senderId: operatorId,
-        receiverId: claimer,
+    };
+    const transfer = (recipient: string, amount = 100) =>
+      new TransferTransaction()
+        .addTokenTransfer(tokenId, operator, -amount)
+        .addTokenTransfer(tokenId, recipient, amount);
+    const ensure = (recipient: string, overrides: Partial<StrategyContext> = {}, amount = 100n) =>
+      ensureAssociated({
+        accountId: recipient,
         tokenId,
+        senderId: operator,
+        amount,
+        context: { ...context, ...overrides },
+        executor,
       });
-
-      const claimResponse = await (
-        await new TokenClaimAirdropTransaction().addPendingAirdropId(pendingId).freezeWith(client).sign(operatorKey)
-      ).execute(client);
-      record(
-        "Path 3 — recipient CLAIMS the pending airdrop",
-        "HTS / HIP-904",
-        claimResponse.transactionId.toString(),
-        String((await claimResponse.getReceipt(client)).status),
+    const related = (recipient: string) =>
+      indexed(
+        () => getTokenRelationship(recipient, tokenId),
+        r => r !== null,
+      );
+    const received = (row: any, recipient: string, amount = 100) =>
+      evidence.check(
+        `${row.label}: exact token delivery`,
+        row.tokenTransfers.some((t: any) => t.token_id === tokenId && t.account === recipient && t.amount === amount),
       );
 
-      // Reject — the recipient hands a held token back and dissociates.
-      const rejectResponse = await (
-        await new TokenRejectTransaction().setOwnerId(claimer).addTokenId(tokenId).freezeWith(client).sign(operatorKey)
-      ).execute(client);
-      record(
-        "Path 3 — recipient REJECTS the token and hands it back",
-        "HTS / HIP-904",
-        rejectResponse.transactionId.toString(),
-        String((await rejectResponse.getReceipt(client)).status),
-      );
+    const explicit = await makeAccount("explicit association");
+    evidence.report.headlineRecipient = explicit;
+    const before = await expectedFailure(
+      "Before: unassociated transfer",
+      "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT",
+      async () => {
+        const response = await transfer(explicit).execute(client);
+        await response.getReceipt(client);
+      },
+    );
+    evidence.check("Failed transfer moved no tokens", before.tokenTransfers.length === 0);
+    const associated = await ensure(explicit);
+    evidence.check(
+      "Decision selects explicit association",
+      associated.strategyUsed === "explicit" && associated.associated,
+    );
+    const act = await evidence.transaction("Native adapter: explicit association", associated.transactionId!);
+    evidence.check("Recipient pays explicit association", act.payer === explicit);
+    const afterResponse = await transfer(explicit).execute(client);
+    await afterResponse.getReceipt(client);
+    const after = await evidence.transaction("After: identical transfer", afterResponse.transactionId.toString());
+    received(after, explicit);
+    evidence.report.headline = { before, act, after };
 
-      // Cancel — the sender withdraws a pending airdrop. Absent from the build
-      // plan's list, and a genuine sixth capability of HIP-904.
-      const canceller = await makeAccount("Airdrop recipient for the cancel case", 0);
-      const secondAirdrop = await new TokenAirdropTransaction()
-        .addTokenTransfer(tokenId, operatorId, -100)
-        .addTokenTransfer(tokenId, canceller, 100)
-        .execute(client);
-      await secondAirdrop.getReceipt(client);
+    const existing = await makeAccount("existing finite auto-slot", 1);
+    const signCount = signed.length;
+    const ready = await ensure(existing, { freeAutoSlots: 1 });
+    evidence.check(
+      "Existing slot requires no transaction or signing",
+      !ready.transactionId && !ready.associated && ready.readyToReceive && signed.length === signCount,
+    );
+    const existingTx = await transfer(existing).execute(client);
+    await existingTx.getReceipt(client);
+    received(await evidence.transaction("Existing auto-slot: delivery", existingTx.transactionId.toString()), existing);
+    evidence.check("Arrival created an automatic relationship", (await related(existing))?.automaticAssociation);
 
-      const cancelResponse = await (
-        await new TokenCancelAirdropTransaction()
-          .addPendingAirdropId(new PendingAirdropId({ senderId: operatorId, receiverId: canceller, tokenId }))
-          .freezeWith(client)
-          .sign(operatorKey)
-      ).execute(client);
-      record(
-        "Path 3 — SENDER cancels a pending airdrop before it is claimed",
-        "HTS / HIP-904",
-        cancelResponse.transactionId.toString(),
-        String((await cancelResponse.getReceipt(client)).status),
-      );
-    }
+    const raised = await makeAccount("raise auto-slot limit");
+    const raisedState = await ensure(raised, { senderControlsRecipient: true });
+    evidence.check(
+      "Adapter raises slots without falsely reporting association",
+      raisedState.strategyUsed === "auto-slot" && !raisedState.associated && raisedState.readyToReceive,
+    );
+    await evidence.transaction("Native adapter: raise automatic slots", raisedState.transactionId!);
+    const updated = await indexed(
+      () => getAccount(raised),
+      a => a.maxAutomaticTokenAssociations === -1,
+    );
+    evidence.check("Account now accepts unlimited slots", updated.maxAutomaticTokenAssociations === -1);
+    const raisedTx = await transfer(raised).execute(client);
+    await raisedTx.getReceipt(client);
+    received(await evidence.transaction("Raised auto-slot: delivery", raisedTx.transactionId.toString()), raised);
+    evidence.check("Raised-slot delivery associated automatically", (await related(raised))?.automaticAssociation);
 
-    // ------------------------------------------------- path 4, batch
-    console.log("\nPath 4 — HIP-551 atomic associate + transfer.");
-    const batchRecipient = await makeAccount("Batch recipient, no free slots", 0);
+    const claimer = await makeAccount("pending airdrop and claim");
+    const pending = await ensure(claimer, { recipientCanSign: false, recipientHasHbarForFees: false });
+    await evidence.transaction("Native adapter: pending airdrop", pending.transactionId!);
+    evidence.check(
+      "Pending airdrop is not reported as associated",
+      pending.strategyUsed === "airdrop" && !pending.associated && !pending.readyToReceive,
+    );
+    const pendingRows = await indexed(
+      () => getPendingAirdrops(claimer),
+      rows => rows.some(r => r.tokenId === tokenId && r.senderId === operator),
+    );
+    evidence.check(
+      "Pending amount indexed by mirror",
+      pendingRows.some(r => r.tokenId === tokenId && r.amount === 100n),
+    );
+    const pendingRequest = { senderId: operator, accountId: claimer, tokenId };
+    const claim = await executor.claim(pendingRequest);
+    received(await evidence.transaction("Native adapter: claim pending airdrop", claim.transactionId), claimer);
+    const reject = await executor.reject({ accountId: claimer, tokenId });
+    received(await evidence.transaction("Native adapter: reject held token", reject.transactionId), operator);
 
-    /**
-     * Two transactions, one atomic unit.
-     *
-     * This is the path users expect from other chains: one approval, and no
-     * window in which the token is associated but not delivered. Done as two
-     * separate transactions, a failure in between leaves the account paying
-     * for an association it never used.
-     *
-     * Each inner transaction needs its OWN transaction id — they are separate
-     * transactions submitted together, not one transaction with two bodies.
-     * `batchify` sets the batch key and signs; the BatchTransaction is then
-     * signed by the holder of that key.
-     */
-    const innerAssociate = await new TokenAssociateTransaction()
-      .setAccountId(batchRecipient)
-      .setTokenIds([tokenId])
-      .setTransactionId(TransactionId.generate(batchRecipient))
-      .batchify(client, operatorKey.publicKey);
+    const canceller = await makeAccount("pending airdrop cancellation");
+    const cancelRequest = { senderId: operator, accountId: canceller, tokenId };
+    const toCancel = await executor.execute({ ...cancelRequest, strategy: "airdrop", amount: 100n });
+    await evidence.transaction("Native adapter: airdrop before cancellation", toCancel.transactionId);
+    evidence.check("Cancellation fixture is pending", toCancel.pending);
+    const cancel = await executor.cancel(cancelRequest);
+    await evidence.transaction("Native adapter: cancel pending airdrop", cancel.transactionId);
+    const cancelled = await indexed(
+      () => getPendingAirdrops(canceller),
+      rows => !rows.some(r => r.tokenId === tokenId),
+    );
+    evidence.check("Cancelled pending entry disappears", !cancelled.some(r => r.tokenId === tokenId));
 
-    const innerTransfer = await new TransferTransaction()
-      .addTokenTransfer(tokenId, operatorId, -100)
-      .addTokenTransfer(tokenId, batchRecipient, 100)
-      .setTransactionId(TransactionId.generate(operatorId))
-      .batchify(client, operatorKey.publicKey);
-
-    const batchResponse = await (
-      await new BatchTransaction()
-        .addInnerTransaction(innerAssociate)
-        .addInnerTransaction(innerTransfer)
-        .freezeWith(client)
-        .sign(operatorKey)
-    ).execute(client);
-
-    record(
-      "Path 4 — HIP-551 atomic associate + transfer, ONE approval",
-      "HTS / HIP-551",
-      batchResponse.transactionId.toString(),
-      String((await batchResponse.getReceipt(client)).status),
+    // Directly exercise the adapter's immediate-delivery record interpretation too.
+    const delivered = await executor.execute({
+      strategy: "airdrop",
+      senderId: operator,
+      accountId: existing,
+      tokenId,
+      amount: 100n,
+    });
+    evidence.check("Immediate airdrop is not reported pending", delivered.pending === false);
+    received(
+      await evidence.transaction("Native adapter: immediate airdrop delivery", delivered.transactionId),
+      existing,
     );
 
-    for (const [label, id] of [
-      ["inner 1 of 2 — the association", innerAssociate.transactionId],
-      ["inner 2 of 2 — the transfer", innerTransfer.transactionId],
-    ] as const) {
-      if (id) {
-        collected.push({
-          what: `${label} (atomic with the batch above)`,
-          service: "HTS / HIP-551",
-          txId: id.toString(),
-          status: "SUCCESS",
-        });
-        console.log(`    ${label}  ${hashscanTx(id.toString())}`);
-      }
+    const batchRecipient = await makeAccount("atomic batch");
+    const firstBatchSignature = signed.length;
+    const batch = await ensure(batchRecipient, { preferSingleApproval: true });
+    evidence.check("Decision selects native batch", batch.strategyUsed === "batch" && batch.associated);
+    const outer = await evidence.transaction("Native adapter: atomic batch", batch.transactionId!);
+    for (const inner of signed.slice(firstBatchSignature).filter(s => s.type !== "BatchTransaction")) {
+      const row = await evidence.transaction(`Batch child: ${inner.type}`, inner.id);
+      evidence.check(
+        `${inner.type} belongs to the outer batch`,
+        row.parentConsensusTimestamp === outer.consensusTimestamp,
+      );
+      if (inner.type === "TransferTransaction") received(row, batchRecipient);
     }
+    evidence.check(
+      "Batch created an explicit relationship",
+      (await related(batchRecipient))?.automaticAssociation === false,
+    );
 
-    // ------------------------------------------------- summary
-    console.log("\n\n--- paste into EVIDENCE.md ---\n");
-    console.log("| What it proves | Service | Link |");
-    console.log("| --- | --- | --- |");
-    for (const e of collected) {
-      const what = e.expectedFailure ? `**${e.what}**` : e.what;
-      console.log(`| ${what} | ${e.service} | [\`${e.txId}\`](${hashscanTx(e.txId)}) — \`${e.status}\` |`);
+    const rollback = await makeAccount("atomic rollback");
+    await expectedFailure("Native adapter: intentionally failing atomic batch", "INNER_TRANSACTION_FAILED", () =>
+      ensure(rollback, { preferSingleApproval: true }, 1_000_000n),
+    );
+    // The consensus failure is already indexed. A rolled-back association must not persist.
+    evidence.check("Failed batch left no token relationship", (await getTokenRelationship(rollback, tokenId)) === null);
+    evidence.finish();
+    if (browserMode || process.argv.includes("--evm"))
+      await generateEvmEvidence(wallet.privateKey, operator, evidence.report.startedAt);
+  } catch (error) {
+    evidence.report.error = evidenceError(error);
+    try {
+      const failed = failureDetails(error);
+      evidence.report.failedTransaction = failed;
+      evidence.save();
+      if (failed.phase === "consensus")
+        await evidence.transaction("Run stopped: consensus failure", failed.id, failed.status);
+    } catch {
+      /* Preserve the original error even when its mirror lookup fails. */
     }
-    console.log(`\nToken: ${EXPLORER}/token/${tokenId.toString()}`);
+    evidence.save();
+    throw error;
   } finally {
+    if (browser) {
+      try {
+        await sweepFixtureFunding(client, key, operator, evidence);
+        await refundEvidenceWallet(wallet, browser.refundAddress, evidence);
+      } catch (error) {
+        evidence.report.cleanupError = evidenceError(error);
+        console.error(
+          "Cleanup failed. The encrypted key is retained; retry --browser --refund without sending more funding.",
+        );
+        process.exitCode = 1;
+      }
+      if (evidence.report.complete) evidence.finish();
+    }
+    evidence.save();
     client.close();
   }
 }
-
 main().catch(error => {
-  console.error(`\nFailed: ${error?.message ?? error}`);
-  process.exit(1);
+  console.error(evidenceError(error));
+  process.exitCode = 1;
 });

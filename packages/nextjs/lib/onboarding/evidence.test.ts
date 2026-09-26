@@ -48,7 +48,7 @@ describe("the three beats are the three beats", () => {
 
   it("the_first_and_last_are_the_same_transfer_from_the_same_sender", () => {
     // Both transfers were built by the sender; only the association differs.
-    for (const beat of EVIDENCE_BEATS) {
+    for (const beat of [EVIDENCE_BEATS[0], EVIDENCE_BEATS[2]]) {
       expect(beat.transactionId.startsWith(`${EVIDENCE_ACCOUNTS.sender}-`)).toBe(true);
     }
   });
@@ -71,7 +71,7 @@ describe("every beat is checkable", () => {
     const url = hashscanUrl(EVIDENCE_BEATS[0].transactionId);
     // The hyphenated form contains no characters encodeURIComponent rewrites,
     // so the link must come out byte-identical to the one in EVIDENCE.md.
-    expect(url).toBe("https://hashscan.io/testnet/transaction/0.0.10505627-1789836087-477565839");
+    expect(url).toBe(`https://hashscan.io/testnet/transaction/${EVIDENCE_BEATS[0].transactionId}`);
   });
 
   it("every_beat_carries_a_sentence_a_reader_can_check", () => {

@@ -1,21 +1,53 @@
 # Preflight
 
-**Run preflight before the transfer.**
+**Choose the right Hedera token-onboarding path. Explain it. Prove it on-chain.**
 
-Your users acquire tokens on **[SaucerSwap](https://www.saucerswap.finance/)** — a live Hedera DEX — and
-hold them without ever hitting `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`. Hedera shipped
-three protocol changes at the association problem and produced four mechanisms
-with **no guidance on which to use when**. This template implements all four
-behind one API that picks for you and tells you, in a sentence your UI can
-render, which it chose and why. It also handles the seven quieter traps that
-surround it: address duality, key types, key rotation, decimals, read
-consistency, status codes, and undocumented relay limits.
+Preflight is a **scaffold-hbar template** for developers building token acquisition,
+distribution, and account-readiness flows on Hedera. It combines a reusable,
+framework-free TypeScript library with a working SaucerSwap testnet acquisition UI.
+
+Hedera offers several ways to receive tokens: explicit association, automatic
+association slots, sender-paid airdrops, and atomic association-plus-transfer batches.
+The useful question is **which mechanism fits this account, signer, and fee budget?**
+Preflight answers that question and returns a sentence your application can display.
+
+[Quick start](#8-quick-start) · [Native SDK integration](#native-sdk-execution-and-the-evm-wallet-flow) ·
+[Evidence](EVIDENCE.md) · [Quality checks](https://github.com/timix648/preflight/actions/workflows/ci.yaml)
+
+### What you can build with it
+
+| Your integration                 | What Preflight provides                                                                                                                                               |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A token acquisition dApp         | Live router quotes, explicit HTS association, then a SaucerSwap swap; stale quotes, wrong networks, and mismatched account/token state block submission               |
+| Native token onboarding          | `ensureAssociated()` chooses a mechanism; `createHieroAssociationExecutor()` builds and submits the corresponding Hiero SDK transactions through your signer callback |
+| Airdrop distribution             | Immediate-versus-pending delivery detection, recipient claim, sender cancellation, and rejection of held tokens                                                       |
+| Account diagnostics              | Address form, key type, usable automatic slots, association state, and explanations for alternative mechanisms                                                        |
+| A different framework or backend | Plain TypeScript modules with no React, Next.js, wagmi, database, or key-storage dependency                                                                           |
+
+### Why the implementation is worth inspecting
+
+- **A useful first page without credentials.** Account diagnostics, token metadata,
+  network limits, and DEX quotes work before connecting a wallet.
+- **Decisions and execution are separate.** The pure policy is tested across the
+  full input matrix; the native adapter can use the signer your application owns.
+- **The DEX path is executable.** It uses router quotes, token-specific decimals,
+  integer slippage arithmetic, and explicit association before the swap.
+- **Success means a successful receipt.** A transaction hash alone does not unlock
+  a success message. Mirror indexing, quote age, and wallet changes are handled explicitly.
+- **Evidence is inspectable.** Transaction IDs link to HashScan; refreshed reports
+  include timestamps, source hashes, observed results, and assertions. Incomplete runs
+  do not replace a completed report.
+
+**Scope:** Hedera testnet, fungible token onboarding, and direct WHBAR-to-token
+SaucerSwap V1 routes. Association readiness does not bypass token freeze/KYC/pause
+rules, custom fees, missing liquidity, or insufficient transaction fees. This is an
+experimental template, not an audited production deployment.
 
 ## Contents
 
 1. [Create a project from this template](#1-create-a-project-from-this-template)
 2. [Disclaimer](#2-disclaimer)
-3. [Verify every claim in five minutes](#3-verify-every-claim-in-five-minutes)
+3. [Verify the implementation](#3-verify-the-implementation)
 4. [What is in this template](#4-what-is-in-this-template)
 5. [The five routes, and what to do on each](#5-the-five-routes-and-what-to-do-on-each)
 6. [Architecture](#6-architecture)
@@ -49,10 +81,11 @@ This template is experimental and has not been audited. Do not use it in
 production without your own review. It targets Hedera **testnet** by default and
 is not intended to write to mainnet.
 
-## 3. Verify every claim in five minutes
+## 3. Verify the implementation
 
-Nothing below needs a wallet, a key or a `.env` file. Each row is a claim this
-README makes and the exact way to falsify it.
+Start with the credential-free checks below. Signed evidence generation is a
+separate, explicit testnet run. Existing transaction links can be inspected without
+a signer; a clean dependency install and build can take longer than five minutes.
 
 | Claim                                                    | Check it                                                                                                                                                                                                                                                                                                              |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,9 +94,9 @@ README makes and the exact way to falsify it.
 | It reports slots that are **available**, not the ceiling | `/diagnose?account=0.0.10622718` → **`0 free of 1`**. Confirm independently: [`accounts/0.0.10622718`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.10622718) gives the ceiling, [`/tokens`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.10622718/tokens) shows the slot is already taken. |
 | ED25519 accounts are unusable with EVM tooling           | `/diagnose?account=0.0.2` → long-zero address, ECRECOVER **not** compatible, and the reason: it returns a _different valid-looking_ address rather than failing.                                                                                                                                                      |
 | Quotes come from the router, not a price feed            | `/acquire`, pick SAUCE, enter 1. The panel shows the router figure, the published feed figure, and the divergence between them — measured above 10% at times.                                                                                                                                                         |
-| The association actually happened                        | Every transaction in [`EVIDENCE.md`](EVIDENCE.md) links to HashScan. The [failing transfer](https://hashscan.io/testnet/transaction/0.0.10505627-1789836087-477565839) carries **zero** token transfers; the [one 2.4s later](https://hashscan.io/testnet/transaction/0.0.10505627-1789836090-275408686) moves 100.   |
-| The tests are real                                       | `yarn test` — core and contract regressions, offline. `yarn workspace @sh/nextjs test:live` — 14 against live testnet.                                                                                                                                                                                                       |
-| It passes the bounty's own gate                          | Previous recorded run: `passed=true`, 0 findings, 7/7 routes. Re-run `yarn harness:validate` for your checkout.                                                                                                                                                                                                                                                      |
+| The association actually happened                        | [Fresh before/after evidence](EVIDENCE.md#the-pair-that-matters): failed transfer, recipient-paid association, then identical successful transfer.                                                                                                                                                                    |
+| The tests are real                                       | `yarn test` — core and contract regressions, offline. `yarn workspace @sh/nextjs test:live` — 14 against live testnet.                                                                                                                                                                                                |
+| It passes the bounty's own gate                          | Previous recorded run: `passed=true`, 0 findings, 7/7 routes. Re-run `yarn harness:validate` for your checkout.                                                                                                                                                                                                       |
 
 ### Two honest caveats about running the gate yourself
 
@@ -108,7 +141,7 @@ documented system-Chrome fallback.
 ### `/` — the credential-free argument
 
 Opens with the three-beat proof: the **same transfer** failing, the kit
-associating, then succeeding, 2.4 seconds apart, each linking to HashScan. The
+associating, then succeeding, each linking to HashScan. The
 elapsed time is computed from the consensus timestamps at render, never
 hard-coded.
 
@@ -206,8 +239,8 @@ than by a bundler rule, so it is stated explicitly in `AGENTS.md`.
 
 It buys three things. The core runs anywhere — a Next.js route handler, a
 migration script, a test, a different framework. It can be tested without a DOM,
-a wallet, or a network, which is why the decision tree has 24 tests that run in
-84 milliseconds. And it means a developer forking this template can take the
+a wallet, or a network. The ordinary suite includes policy invariants, adapter
+serialization, failure handling, and acquisition-state regressions. And it means a developer forking this template can take the
 library and throw away the UI, which is what most of them will want to do.
 
 ### Why the decision is separated from the execution
@@ -226,9 +259,10 @@ that knowledge is now a pure function with seven invariants asserted across all
 `never_requires_a_signature_the_recipient_cannot_give`, catches an entire class
 of bug: choosing a path that builds a transaction nobody can ever complete.
 
-Because the executor is an interface rather than a concrete client, the same
-core runs server-side against an operator key and in the browser against a
-wallet, and `lib/` never learns which.
+The native executor accepts a caller-supplied signing callback. A backend signer
+or a compatible Hedera wallet can implement that callback. The shipped EVM UI
+uses shared call builders in `evm-executor.ts`; an EVM wallet is not silently
+treated as a native HAPI signer.
 
 ### Why state lives where it lives
 
@@ -280,8 +314,8 @@ the ordering is enforced rather than suggested.
 
 ### Choosing the router: check the endpoint, not the blog post
 
-Three SaucerSwap routers are documented for testnet. All three resolve, and all
-three look equally healthy in the docs. They are not:
+A deployment survey on **19 September 2026** compared these testnet endpoints.
+The ages below are historical observations from that survey, not live counters:
 
 | Contract        | Hedera id     | Last on-chain call         |
 | --------------- | ------------- | -------------------------- |
@@ -289,13 +323,13 @@ three look equally healthy in the docs. They are not:
 | V2 SwapRouter   | `0.0.1414040` | 29 hours ago               |
 | V2 **QuoterV2** | `0.0.1390002` | **105 days ago** — avoided |
 
-QuoterV2 is the obvious choice for pricing, and nothing has called it in over
-three months. Every address in `lib/onboarding/contracts.ts` was verified
-against the live mirror node rather than copied from documentation.
+That survey found QuoterV2 dormant despite its documented address. The template
+therefore uses V1 RouterV3, whose quote endpoint is exercised again in the latest
+read evidence. The historical survey does not establish today's V2 activity.
 
 ### Quote from the router, never from the price feed
 
-Measured on testnet for HBAR → SAUCE:
+Historical measurement on 19 September 2026 for HBAR → SAUCE:
 
 ```
 published price feed implied   $0.00143646 per SAUCE
@@ -311,7 +345,7 @@ the rate by 0.13%:
    100 HBAR  ->  55.0277 SAUCE per HBAR
 ```
 
-The pool is deep; the feed simply disagrees with it. A UI that quotes from the
+In that measurement, price impact did not explain the feed discrepancy. A UI that quotes from the
 feed and executes against the pool misleads a user by double digits and looks
 like a bug in your own code. So `/acquire` shows both numbers side by side with
 the divergence named — price feeds for display and ranking, the router for
@@ -410,57 +444,36 @@ reusable, but no route targets mainnet and the harness recipe rejects it.
 
 ## 11. Verified testnet transactions
 
-Full table in [`EVIDENCE.md`](EVIDENCE.md). Regenerate it all with
-`yarn hardhat:evidence`.
+The latest adapter evidence was completed on **2026-09-26 UTC**.
+[Consensus tables and exact assertions](EVIDENCE.md) cover the native SDK and
+public read integrations. **Fresh signed EVM execution remains unverified** after a relay gas-price rejection. The runner fix is locally tested; no more funding or refund work is underway.
 
-### The pair that matters
+| Step         | Result                                                | Public proof                                                                                    |
+| ------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Before       | TOKEN_NOT_ASSOCIATED_TO_ACCOUNT; zero token transfers | [failed transfer](https://hashscan.io/testnet/transaction/0.0.10727914-1790416730-714923658)    |
+| Adapter acts | SUCCESS; recipient-paid explicit association          | [association](https://hashscan.io/testnet/transaction/0.0.10727916-1790416739-072577022)        |
+| After        | SUCCESS; 100 smallest units delivered                 | [identical transfer](https://hashscan.io/testnet/transaction/0.0.10727914-1790416742-762508366) |
 
-The same transfer, to the same account, 2.4 seconds apart. The only thing that
-changed between them is that the kit associated the token.
+The token has **2 decimals**. The identical transfer moves **100 smallest units**
+only after the adapter associates the recipient. The elapsed consensus time is
+**11.464 seconds**, derived from the new records rather than reused
+from an older run.
 
-|                                                                                                 | Result                                | Tokens moved    |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------- | --------------- |
-| [Before](https://hashscan.io/testnet/transaction/0.0.10505627-1789836087-477565839)             | **`TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`** | **none**        |
-| [The kit associates](https://hashscan.io/testnet/transaction/0.0.10505627-1789836088-273241870) | `SUCCESS`                             | —               |
-| [After](https://hashscan.io/testnet/transaction/0.0.10505627-1789836090-275408686)              | `SUCCESS`                             | `−100` → `+100` |
+| Proof                  | What a reviewer can inspect                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Four native mechanisms | Explicit association, an existing automatic slot, raising the slot limit, pending/immediate airdrops, and an atomic batch |
+| Airdrop lifecycle      | Claim, rejection of a held token, and sender cancellation, each executed through the reusable adapter                     |
+| Failure safety         | Failed ordinary transfer moves nothing; failed batch leaves no association behind                                         |
+| EVM acquisition        | Shared payload builders and fee selection have local tests; fresh on-chain association and swap proof is outstanding      |
+| Public integrations    | New account/key/slot/balance snapshots, Hashio config, SaucerSwap metadata/quotes, and deployed probe calls               |
 
-The failed transfer carries **zero** token transfers: nothing moved, and the
-sender still paid the fee. That is the problem this template removes, and it is
-the first thing most developers hit on Hedera.
+The EVM runner uses a local test signer funded from a browser wallet. It does
+not claim that a human clicked every AcquireFlow step. Browser regressions exercise
+the actual component separately, with wallet/API boundaries mocked.
 
-### All four mechanisms, on-chain
-
-| Path | Mechanism                                                                                                                                                                                                                                                                                                                                                            | Evidence                                                                                                                                                                                                                                                         |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Explicit `TokenAssociateTransaction`                                                                                                                                                                                                                                                                                                                                 | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836088-273241870)                                                                                                                                                                                  |
-| 2    | HIP-23 auto-slot, **zero approvals**                                                                                                                                                                                                                                                                                                                                 | [tx](https://hashscan.io/testnet/transaction/0.0.10505627-1789836092-919819020)                                                                                                                                                                                  |
-| 3    | HIP-904 airdrop — [send](https://hashscan.io/testnet/transaction/0.0.10505627-1789836095-256339668) · [claim](https://hashscan.io/testnet/transaction/0.0.10505627-1789836093-628534669) · [reject](https://hashscan.io/testnet/transaction/0.0.10505627-1789836096-561225275) · [cancel](https://hashscan.io/testnet/transaction/0.0.10505627-1789836099-666004205) | 4 transactions                                                                                                                                                                                                                                                   |
-| 4    | HIP-551 atomic batch, **one atomic submission**                                                                                                                                                                                                                                                                                                                               | [batch](https://hashscan.io/testnet/transaction/0.0.10505627-1789836958-700023220) + [inner 1](https://hashscan.io/testnet/transaction/0.0.10620973-1789836958-708578860) + [inner 2](https://hashscan.io/testnet/transaction/0.0.10505627-1789836957-767192698) |
-
-The airdrop and its claim are worth reading together: the **airdrop moves
-nothing**, and the **claim** is what transfers the tokens. That is HIP-904's
-design visible on-chain — the sender commits and pays, the recipient decides
-later without needing HBAR or a prior association.
-
-The HIP-551 batch is worth reading for a different reason. All three
-transactions land at consecutive **nanoseconds** under one consensus event, and
-the two inner transactions have **different fee payers**: the recipient paid
-for its own association, the sender paid for the transfer. One approval over
-transactions with different payers that either all land or none do — that is
-the part other chains cannot express.
-
-### Contracts
-
-| What it proves                                                                                                | Link                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `AssociationProbe` live and **source-verified**                                                               | [`0.0.10620620`](https://hashscan.io/testnet/contract/0.0.10620620)                                                               |
-| Deploy transaction, 726,927 gas                                                                               | [`0x48830747…b544ee`](https://hashscan.io/testnet/transaction/0x48830747afe6070ce4d1dc4ddda19a7913684d16c988b3b87501ece83bb544ee) |
-| The **same contract with one line changed**, dead on Hedera — also verified, so the diff is readable on-chain | [`0.0.10620483`](https://hashscan.io/testnet/contract/0.0.10620483)                                                               |
-
-Hedera's system contracts are precompiles, so `extcodesize` reports **zero** for
-them inside the EVM. Both contracts passed identical 17-test local suites; only
-one works on the network it was written for. That pair is the most useful thing
-in this table, and [`NOTES-failures.md`](NOTES-failures.md) #16 explains it.
+Reports include source-file hashes and observed results. Current runtime behavior,
+completed tests, historical deployment provenance, and work still outstanding are
+kept distinct in [EVIDENCE.md](EVIDENCE.md).
 
 ## 12. How the pattern works
 
@@ -485,23 +498,22 @@ cannot currently receive._
      decided, and where a quoted `"decimals"` string is coerced to a number.
    - `associationState()` in **`lib/onboarding/association.ts`** — can this
      account hold this token _right now_?
-   - `selectStrategy()`, also in `association.ts`. **Pure.** Given free slots,
-     whether the recipient can sign, and whether it holds HBAR for fees, it
-     returns one of four strategies plus a sentence explaining the choice.
+   - The acquisition policy returns an explicit-association explanation, or
+     reports that association already exists. Native integrations use the pure
+     `selectStrategy()` decision tree with their own signer and fee context.
 
-4. That sentence is rendered verbatim in the UI. It is not a debug string — it
-   is the product. _"The recipient can sign and pay, so the kit batches the
-   association and the transfer into one atomic transaction (HIP-551) — one
-   approval instead of two."_
+4. The explanation is rendered in the UI. The native API can select any of the
+   four mechanisms. The `/acquire` API specifically describes **explicit
+   association followed by a standalone swap**, matching what the EVM wallet executes.
 
-5. The user clicks once. `AcquireFlow` calls `associateToken` on the Hedera
+5. `AcquireFlow` uses `buildAssociationCall()` from `evm-executor.ts` to call `associateToken` on the Hedera
    Token Service at `0x167` with a deliberately generous gas limit, because
    system-contract calls cost far more than they look and an under-provisioned
    limit fails with `INSUFFICIENT_GAS` — which reads like a code bug and is not.
 
 6. Anything that throws goes through `explain()` in
    **`lib/onboarding/status.ts`**, which returns a code, a human sentence, and a
-   fix. **No raw RPC string reaches a user anywhere in this template.**
+   fix. **The onboarding flow renders the explanation instead of a raw RPC error.**
 
 7. The balance re-reads through **`lib/onboarding/consistency.ts`** and renders
    with a `SourceBadge`. If the mirror node still shows the old value, the badge
@@ -510,9 +522,8 @@ cannot currently receive._
 
 ## 13. The eight traps, and what each one costs you
 
-The intro calls these "quieter" because none of them throws. Every one returns
-a plausible value, which is why they survive code review and fail in
-production.
+Some failures are explicit network reverts. Others return a plausible but wrong
+value. The core handles both classes and preserves a human explanation and fix.
 
 | #   | Trap                 | What you'd write                                  | What actually happens                                                                                                                                            | Where it's handled          |
 | --- | -------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
@@ -561,16 +572,17 @@ all 192 contexts automatically — if your branch can strand an account, they fa
 actually worked. Nothing else changes: every catch site already routes through
 `explain()`.
 
-**3. Point the kit at your own relay.** Set
-`NEXT_PUBLIC_HEDERA_TESTNET_RPC_URL`, or pass `{ baseUrl }` to `relayLimits()`.
-Nothing is hardcoded — limits are read from `/config` at runtime, so a
-self-hosted relay with different limits displays correctly with no code change.
+**3. Point the kit at your own relay.** Pass `{ baseUrl }` to relay-reading
+functions and `relay: { baseUrl }` to `routerQuote()`. Thread that configuration
+through your API handlers too. `NEXT_PUBLIC_HEDERA_TESTNET_RPC_URL` configures
+the scaffold provider; setting it alone does not replace every core module default.
+Mirror-node and SaucerSwap clients have their own explicit options.
 
-**4. Add multi-hop routing.** `hbarToTokenPath()` in
-`lib/onboarding/contracts.ts` builds a two-element path. The router accepts
-longer ones, so returning `[WHBAR, USDC, target]` enables tokens with no direct
-HBAR pool. `routerQuote()` needs no change — `getAmountsOut` already handles
-paths of any length.
+**4. Add multi-hop routing.** The current quote encoder and execution builders
+intentionally support exactly `[WHBAR, target]`. Supporting longer routes requires
+updating the ABI array encoding in `routerQuote()`, path types, route selection,
+and the swap builder together. Add quote/execution parity tests before exposing it
+in the UI; changing only `hbarToTokenPath()` is insufficient.
 
 **5. Reuse the core without the UI.** Import from
 `packages/nextjs/lib/onboarding` and delete `app/`. There are no React imports
@@ -613,12 +625,12 @@ your wallet or signing service; this adapter reads no environment variables and
 stores no keys. Configure a query payer on the SDK client for the airdrop record
 query. Set `batch.supported` only for a network where native HIP-551 is available.
 
-| Mechanism | What the adapter executes | Result |
-| --- | --- | --- |
-| Explicit | Recipient-paid `TokenAssociateTransaction` | Associated; delivery remains the caller's next operation |
-| Auto-slot | No transaction for an existing slot; otherwise recipient-paid `AccountUpdateTransaction` | `readyToReceive: true`, `associated: false` until delivery |
-| Airdrop | Sender-paid `TokenAirdropTransaction` | The transaction record determines whether delivery is pending |
-| Batch | Recipient-paid native association + transfer in `BatchTransaction`; sender also signs the transfer | Atomic delivery, or an error; no smart-contract calls inside the batch |
+| Mechanism | What the adapter executes                                                                          | Result                                                                 |
+| --------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Explicit  | Recipient-paid `TokenAssociateTransaction`                                                         | Associated; delivery remains the caller's next operation               |
+| Auto-slot | No transaction for an existing slot; otherwise recipient-paid `AccountUpdateTransaction`           | `readyToReceive: true`, `associated: false` until delivery             |
+| Airdrop   | Sender-paid `TokenAirdropTransaction`                                                              | The transaction record determines whether delivery is pending          |
+| Batch     | Recipient-paid native association + transfer in `BatchTransaction`; sender also signs the transfer | Atomic delivery, or an error; no smart-contract calls inside the batch |
 
 `executor.claim()` accepts a pending airdrop as the recipient. `executor.cancel()`
 withdraws it as the sender. `executor.reject()` returns a **held** token; it does
@@ -634,6 +646,10 @@ paths, not choices silently substituted into a DEX swap. [Hedera's September 22
 notice](https://hedera.com/blog/atomic-batch-transactions-no-longer-support-smart-contract-calls/)
 keeps native batches supported while deprecating contract calls inside batches.
 
+The EVM UI and signed evidence runner share `buildAssociationCall()` and
+`buildSwapCall()` from `lib/onboarding/evm-executor.ts`. A scripted signer verifies
+those same payloads on-chain; it is not presented as a browser-wallet interaction.
+
 The swap guard requires a matching account/token/network profile and a quote
 less than 30 seconds old for the current amount. A pending transaction prevents
 duplicate submissions. The UI checks receipt status, then re-reads association
@@ -644,9 +660,15 @@ from the mirror node before enabling the router.
 ```bash
 yarn test          # core, native SDK, and contract tests; no transaction broadcasts
 yarn next:test     # core and native SDK regressions
-yarn hardhat:test  # 17 contract only
+yarn hardhat:test  # contracts and evidence-runner regressions
 yarn workspace @sh/nextjs test:live   # 14 live-endpoint tests, hits real testnet
 yarn test:browser  # actual AcquireFlow in Chromium; mocked wallet and API boundaries
+
+yarn hardhat:evidence:reads  # fresh public read snapshots, no signer
+yarn hardhat:evidence --browser  # wallet-funded, encrypted recovery signer; native + EVM
+yarn hardhat:evidence --evm      # local encrypted keystore; native + EVM
+yarn hardhat:evidence:render     # promote complete reports to docs and homepage
+yarn hardhat:evidence:render --native-only # native/read proofs, explicit EVM gap
 
 yarn harness:validate   # the bounty's own gate: static + commands + route walk
 ```
@@ -656,16 +678,106 @@ fails because testnet was slow teaches developers to ignore red.
 
 Tests are named after the guarantee they protect, not the function they call:
 
-| Test                                                    | Guarantee                                                     |
-| ------------------------------------------------------- | ------------------------------------------------------------- |
-| `never_requires_a_signature_the_recipient_cannot_give`  | Never builds a transaction nobody can complete                |
-| `never_batches_when_batching_is_unsupported`            | Never promises HIP-551 atomicity the SDK cannot deliver       |
-| `always_leaves_airdrop_available_when_work_is_needed`   | No account can become unreachable                             |
-| `long_zero_is_never_ecrecover_compatible`               | A valid signature is never wrongly rejected                   |
-| `lossy_narrowing_is_never_silent`                       | 18dp → 8dp reports its remainder                              |
-| `excess_precision_is_rejected_not_rounded`              | A caller's rounding bug never hides behind a plausible number |
-| `ecrecover_returns_a_wrong_address_rather_than_failing` | Demonstrates the trap on-chain                                |
-| `points_at_0x16a_for_the_account_service_not_0x167`     | The address confusion cannot regress                          |
+| Test                                                    | Guarantee                                                          |
+| ------------------------------------------------------- | ------------------------------------------------------------------ |
+| `never_requires_a_signature_the_recipient_cannot_give`  | Never builds a transaction nobody can complete                     |
+| `never_batches_when_batching_is_unsupported`            | Never promises HIP-551 atomicity the SDK cannot deliver            |
+| `always_leaves_airdrop_available_when_work_is_needed`   | Pending creation remains an option without recipient authorization |
+| `long_zero_is_never_ecrecover_compatible`               | A valid signature is never wrongly rejected                        |
+| `lossy_narrowing_is_never_silent`                       | 18dp → 8dp reports its remainder                                   |
+| `excess_precision_is_rejected_not_rounded`              | A caller's rounding bug never hides behind a plausible number      |
+| `ecrecover_returns_a_wrong_address_rather_than_failing` | Demonstrates the trap on-chain                                     |
+| `points_at_0x16a_for_the_account_service_not_0x167`     | The address confusion cannot regress                               |
+
+### Reproduce signed evidence without exporting your wallet key
+
+Run `yarn hardhat:evidence --browser` in your own interactive terminal. Before
+opening the funding page, it asks you to choose a recovery password locally,
+saves an ethers encrypted JSON keystore under the gitignored
+`.harness/runtime/evidence-signer.json`, and verifies it can decrypt that file.
+Keep the file and password until all recovery is complete. Never put passwords
+or private keys in chat, command arguments, reports, or Git.
+
+Then open `http://127.0.0.1:3939` in the Chrome profile containing your OKX wallet.
+The page displays **40 test HBAR**, the destination, and chain **296** before
+asking the wallet to sign. Free test HBAR is available from the
+[official faucet](https://portal.hedera.com/faucet); mainnet HBAR is not needed.
+The helper verifies the chain, destination, amount and successful receipt.
+Receipt retries reuse the original hash instead of submitting another payment.
+
+The runner creates isolated fixtures, executes the actual native adapter, and
+uses the shared EVM builders for small SAUCE and CLXY purchases. It attempts to
+return unused HBAR to the verified funding sender, leaving small reserves.
+If cleanup fails, the encrypted recovery key remains on disk. Run
+`yarn hardhat:evidence --browser --refund` to unlock that same signer and retry
+cleanup without creating fixtures or requesting more funding. Already-funded
+signers are refused for another ordinary run, preventing accidental duplicate
+funding. After recovery, retain or archive the recovery files before a new run.
+Completed fixtures return their unused HBAR before the next fixture is funded,
+so the test budget is reused throughout the run. Balance reads for recovery use
+the EVM relay; the legacy HAPI balance query returned `BUSY` during validation.
+
+For the specific interrupted checkpoint after all four native mechanisms passed
+but before the rollback fixture was created, `yarn hardhat:evidence --browser --resume`
+reuses the verified receipts and saved signer, reclaims fixture funds, and finishes
+the rollback and EVM checks. It checks the source hashes and checkpoint before
+continuing, and never opens a new funding request. It is not a general retry of
+unknown or partially confirmed writes.
+
+The September 26 native checkpoint is now complete. Do not use `--resume` for
+that completed run. Fresh signed EVM proof remains outstanding after a gas-price
+rejection; funding and refund work has been stopped at the owner's request.
+The runner now selects the relay gas price explicitly, with local regression tests.
+
+This helper is test infrastructure, not a production wallet.
+
+The existing-keystore alternative is `yarn hardhat:evidence --evm`. It prompts
+locally to unlock the encrypted deployer account; the core adapter never reads
+a private key or environment variable.
+
+| Coverage               | What a successful signed run must demonstrate                                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Explicit               | The same transfer fails before association and succeeds afterward; the adapter's recipient pays for association                                 |
+| Existing auto-slot     | `ensureAssociated()` requests no signature and submits no account update; arrival creates the relationship                                      |
+| Raising the slot limit | The actual adapter sends `AccountUpdateTransaction`; the relationship is created only on subsequent delivery                                    |
+| Airdrop                | Pending creation moves no tokens; immediate delivery is distinguished using the transaction record                                              |
+| Lifecycle              | Claim moves tokens, reject returns held tokens, cancel removes the pending entry                                                                |
+| Native batch           | Association and transfer belong to one parent; a deliberately insufficient transfer rolls back association                                      |
+| EVM                    | Successful HTS return code, indexed association, fresh router quote, successful swap receipt, and received units at or above the slippage floor |
+
+Reports are saved under `evidence/runs/`. Only a successful run updates its
+`evidence/latest-*.json` file. Reports include the source commit and SHA-256 hashes
+of the core files, which identify the executed code even during a local uncommitted
+run. Public IDs, receipts and assertions belong in evidence; private keys,
+keystores and signed transaction bytes do not.
+
+### Current limits and production work
+
+- A ready association is not a promise that every token can transfer. Token
+  restrictions, account authorization, fees, balances, and pool liquidity still apply.
+- Native batches contain HTS/account transactions, not the SaucerSwap contract call.
+- The native adapter's claim and slot-update operations use the recipient as payer.
+  An account without funds needs an appropriate payer integration before those steps.
+- Batch atomicity does not guarantee one wallet prompt; required signatures depend
+  on the accounts and wallet integration.
+- The DEX integration is direct-pair V1 routing on testnet. It does not implement
+  multi-hop discovery, cross-chain transfers, or a mainnet configuration switch.
+- CLPR is a possible future receiving-flow integration. No CLPR runtime dependency
+  is included, and it is not required to use or evaluate this template.
+
+### Where CLPR could fit
+
+The [CLPR proposal, HIP-1535 at the reviewed revision](https://github.com/hiero-ledger/hiero-improvement-proposals/blob/dc7363d80e214956664f67c6619220906ce99931/HIP/hip-clpr.md)
+is marked Draft and describes cross-ledger messaging verified through per-channel
+verifier contracts. It does not remove Hedera's token association requirements.
+Our proposed use is a future destination-side readiness check: after an application
+authenticates a cross-ledger request, Preflight could select the appropriate local
+token-receiving mechanism. This is an integration direction, not an implemented feature.
+
+A real integration would need deployed service support, reviewed channel/verifier
+trust, replay-safe application processing, and a defined signer/payer policy.
+Keep it optional; the current four mechanisms work without CLPR. The proposal
+alone is not evidence that the service is available on this template's testnet.
 
 ## 16. Troubleshooting
 
@@ -767,32 +879,18 @@ running and reporting a pass that proves nothing.
 
 ## 18. Evidence index
 
-Every claim this template makes about Hedera is backed by a transaction anyone
-can open. Full tables in [`EVIDENCE.md`](EVIDENCE.md); this is the map.
+| Review target                                    | Source                                                                              |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Latest evidence and its limits                   | [EVIDENCE.md](EVIDENCE.md)                                                          |
+| Native adapter transactions and exact assertions | [latest-native.json](evidence/latest-native.json)                                   |
+| EVM execution status                             | [Incomplete attempt](evidence/runs/2026-09-26T16-09-20-105Z-evm.json)               |
+| Fresh public network snapshots                   | [latest-reads.json](evidence/latest-reads.json)                                     |
+| Original runs, including incomplete runs         | [evidence/runs](evidence/runs/)                                                     |
+| Historical failures and explanations             | [NOTES-failures.md](NOTES-failures.md)                                              |
+| Automated checks on main                         | [Quality workflow](https://github.com/timix648/preflight/actions/workflows/ci.yaml) |
 
-| What                                                               | Where                                                                                                                                     |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| The same transfer failing, then succeeding 2.4s apart              | [`EVIDENCE.md`](EVIDENCE.md#the-pair-that-matters)                                                                                        |
-| All four association mechanisms, on-chain                          | [`EVIDENCE.md`](EVIDENCE.md#all-four-paths-in-consensus-order)                                                                            |
-| Two full browser journeys — associate then acquire, SAUCE and CLXY | [`EVIDENCE.md`](EVIDENCE.md#the-browser-journey-end-to-end)                                                                               |
-| `AssociationProbe`, source-verified, and its broken twin           | [`0.0.10620620`](https://hashscan.io/testnet/contract/0.0.10620620) · [`0.0.10620483`](https://hashscan.io/testnet/contract/0.0.10620483) |
-| 21 real failures hit while building this, with causes and fixes    | [`NOTES-failures.md`](NOTES-failures.md)                                                                                                  |
-
-Three of those are worth opening even if you read nothing else:
-
-**The failing transfer** carries **zero** token transfers. Nothing moved and
-the sender still paid. That is the problem, stated by the ledger rather than
-by this README.
-
-**The two contracts** differ by one line and both are source-verified, so the
-diff is readable on-chain. Both passed identical 17-test local suites; only
-one works on Hedera. `NOTES-failures.md` #16 explains why `extcodesize`
-reports zero for a precompile.
-
-**The browser journey** quoted `51.240166 CLXY` before signing, and the mirror
-node reports a balance of `51.240166` after. Exact, not approximate — which is
-the claim `/acquire` makes about quoting from the router rather than from the
-published price feed.
+Start with the before/after transfer, then the failed batch rollback. These show
+the original failure, the onboarding fix, and atomicity. Fresh signed DEX delivery is still an evidence gap.
 
 ## 19. Licence and credits
 

@@ -5,15 +5,7 @@ import { TokenPicker } from "./TokenPicker";
 import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { CheckBadgeIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
 import type { AccountProfile, AssociationState, SaucerToken, StrategySelection } from "~~/lib/onboarding";
-import {
-  SAUCERSWAP_TESTNET_CONTRACTS,
-  SAUCERSWAP_V1_ROUTER_ABI,
-  deadlineFromNow,
-  explain,
-  hashscanUrl,
-  hbarToWeibar,
-  toEvmAddress,
-} from "~~/lib/onboarding";
+import { explain, hashscanUrl } from "~~/lib/onboarding";
 import {
   type AcquisitionContext,
   type QuoteContext,
@@ -21,6 +13,7 @@ import {
   currentQuote,
   sameAcquisition,
 } from "~~/lib/onboarding/acquisition";
+import { buildAssociationCall, buildSwapCall } from "~~/lib/onboarding/evm-executor";
 
 /**
  * The acquire journey, end to end: quote, associate, swap.
@@ -33,25 +26,9 @@ import {
  *    TOKEN_NOT_ASSOCIATED_TO_ACCOUNT error."
  *
  * So the swap button stays disabled until the account can actually hold the
- * token. The kit does not hide that step — it explains which of four
- * mechanisms it chose for it, and why.
+ * token. This EVM flow uses explicit association; native SDK integrations
+ * can select among all four mechanisms.
  */
-
-/** The Hedera Token Service. Callable from any EVM wallet on Hedera. */
-const HTS_PRECOMPILE = "0x0000000000000000000000000000000000000167" as const;
-
-const HTS_ASSOCIATE_ABI = [
-  {
-    name: "associateToken",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "account", type: "address" },
-      { name: "token", type: "address" },
-    ],
-    outputs: [{ name: "responseCode", type: "int64" }],
-  },
-] as const;
 
 interface ProfileResponse {
   profile: AccountProfile;
@@ -289,15 +266,7 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
     setAssociateTx(null);
     setBusy(true);
     try {
-      const hash = await writeContractAsync({
-        address: HTS_PRECOMPILE,
-        abi: HTS_ASSOCIATE_ABI,
-        functionName: "associateToken",
-        chainId: 296,
-        args: [address, toEvmAddress(token.tokenId) as `0x${string}`],
-        // System-contract calls cost far more than they look.
-        gas: 800_000n,
-      });
+      const hash = await writeContractAsync(buildAssociationCall(address, token.tokenId));
       setAssociateTx(hash);
       setAssociateTxFor(submittedFor);
     } catch (cause) {
@@ -334,24 +303,14 @@ export const AcquireFlow = ({ tokens, totalListed }: { tokens: SaucerToken[]; to
     setSwapTx(null);
     setBusy(true);
     try {
-      const hash = await writeContractAsync({
-        address: SAUCERSWAP_TESTNET_CONTRACTS.routerV1.evmAddress as `0x${string}`,
-        abi: SAUCERSWAP_V1_ROUTER_ABI,
-        functionName: "swapExactETHForTokens",
-        chainId: 296,
-        args: [
-          // The slippage floor, not the quote. Passing the quote itself would
-          // revert on any adverse tick between quoting and mining.
-          BigInt(quote.amountOutMin),
-          [SAUCERSWAP_TESTNET_CONTRACTS.whbarToken.evmAddress, toEvmAddress(token.tokenId)] as readonly `0x${string}`[],
-          address,
-          deadlineFromNow(300),
-        ],
-        // EVM transaction value is weibar (18dp); the network divides by 10^10
-        // to reach tinybar. Passing tinybar here under-spends by 10 billion.
-        value: hbarToWeibar(hbarAmount) as unknown as bigint,
-        gas: 1_200_000n,
-      });
+      const hash = await writeContractAsync(
+        buildSwapCall({
+          account: address,
+          tokenId: token.tokenId,
+          hbarAmount,
+          amountOutMin: BigInt(quote.amountOutMin),
+        }),
+      );
       setSwapTx(hash);
       setSwapTxFor({ ...submittedFor, amount: hbarAmount, symbol: token.symbol });
     } catch (cause) {

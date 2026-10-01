@@ -10,10 +10,15 @@ not new labels on the earlier September 19–20 transactions.
 | Shared EVM builders | Verified HTS association and SAUCE/CLXY acquisition | [EVM](evidence/latest-evm.json) |
 | Read adapters | Mirror account/key/slot reads, independent balances, live Hashio limits, SaucerSwap metadata/router quotes, and deployed probe calls | [reads](evidence/latest-reads.json) |
 
-The wallet funds a temporary testnet signer; the runner signs its fixtures in
-memory. This proves SDK/EVM payload execution, not a manual browser-wallet
+The completed runs below used the local encrypted deployer account
+`0.0.10505627`; the runner signed its fixtures in memory. The browser-funded
+temporary signer was used in an earlier attempt, not these latest reports.
+This proves SDK/EVM payload execution, not a manual browser-wallet
 journey. The actual AcquireFlow component has a separate browser regression suite
 with mocked wallet/API boundaries. Those are different kinds of evidence.
+The separate [recorded demo](https://youtu.be/UQkpHRn6z2U) and
+[live app](https://preflight-peach-theta.vercel.app) show the presentation layer;
+the machine-readable reports below establish the scripted transaction results.
 
 ## The pair that matters
 
@@ -134,21 +139,26 @@ Use `yarn hardhat:evidence:render --native-only` to publish completed native/rea
 proofs with the EVM gap stated explicitly. Neither render command sends transactions.
 
 Every report contains the source commit and core-file SHA-256 hashes. Original
-runs are retained under `evidence/runs/`; incomplete runs never replace a latest
-successful report. Public transaction IDs and consensus results can be independently
+runs may be retained locally under gitignored `evidence/runs/`; that history is
+not included in a fresh clone. The three committed `latest-*.json` files are the
+public evidence, and incomplete runs never replace a latest successful report.
+Public transaction IDs and consensus results can be independently
 checked via HashScan or the testnet mirror API. Client transaction-ID timestamps
 are not consensus timestamps; chronology above uses the latter.
 
 ## Funding and remaining validation
 
-The native report lists fixture funding recovery and the return of unused HBAR.
-A small reserve is left in each fixture; transaction fees are consumed.
-Any cleanup error is recorded explicitly.
-The completed refund returned 15.11924709 test HBAR; no further funding or refund
-work is in progress. The earlier memory-only attempt left 39.99871842 test HBAR
-in an inaccessible signer after cleanup failed. See the retained
-[incident audit](evidence/runs/2026-09-26T09-13-26-977Z-native.json).
+The native report records recovery of unused fixture funding. Transaction fees
+and EVM purchases consume test HBAR; the reports should be read for their own run,
+without mixing in balances or refunds from earlier temporary-signer attempts.
+No further funding or refund is needed to inspect this evidence.
+
+Earlier development attempts encountered failed cleanup and a relay fee rejection.
+Those failures motivated encrypted recovery and explicit EVM fee selection. They
+are distinct from the completed September 26 runs shown above; local run history
+is not a downloadable audit attachment in this repository.
 
 This evidence does not certify mainnet operation, audit token-specific restrictions,
 or replace a clean-machine scaffold installation or a fresh full harness gate.
-It does not claim CLPR integration or a new manual browser-wallet demo.
+It does not claim CLPR integration. A demo recording and scripted proof do not
+replace a clean-machine scaffold test or an independent production audit.

@@ -123,7 +123,7 @@ describe("SaucerSwap — the ecosystem anchor", () => {
 });
 
 describe("SaucerSwap router — the execution path", () => {
-  // Verified deployments, cross-checked against the mirror node 19 Sep 2026.
+  // Verified deployments, cross-checked against the live mirror node.
   const SAUCE_EVM = "0x0000000000000000000000000000000000120f46"; // 0.0.1183558
   const SAUCE_DECIMALS = 6;
 

@@ -13,7 +13,7 @@ baseline:
     # Required — used for install fingerprinting.
     # Plain `yarn install`, no --no-immutable: the regenerated lockfile is
     # committed, so an immutable install (what CI does by default) passes.
-    # Verified 18 Sep 2026. See NOTES-failures.md #6.
+    # Verified against the chain. See NOTES-failures.md #6.
     - name: install
       command: yarn install
     - name: build

@@ -51,16 +51,21 @@ const nanos = (timestamp: string) => {
   return BigInt(seconds) * 1_000_000_000n + BigInt(fraction.padEnd(9, "0"));
 };
 const elapsed = Number(nanos(after.consensusTimestamp) - nanos(before.consensusTimestamp)) / 1e9;
+/** A consensus timestamp is Unix seconds + nanoseconds. Judges read dates, not epochs. */
+const utc = (timestamp: string) =>
+  new Date(Number(timestamp.split(".")[0]) * 1000).toISOString().replace("T", " ").replace(".000Z", " UTC");
 const rows = (transactions: any[]) =>
   transactions
-    .map(t => `| ${t.label} | \`${t.result}\` | \`${t.consensusTimestamp}\` | [transaction](${t.hashscanUrl}) |`)
+    .map(
+      t =>
+        `| ${t.label} | \`${t.result}\` | ${utc(t.consensusTimestamp)} · \`${t.consensusTimestamp}\` | [transaction](${t.hashscanUrl}) |`,
+    )
     .join("\n");
 const headlineTable = `| Step | Result | Public proof |\n| --- | --- | --- |\n| Before | TOKEN_NOT_ASSOCIATED_TO_ACCOUNT; zero token transfers | [failed transfer](${before.hashscanUrl}) |\n| Adapter acts | SUCCESS; recipient-paid explicit association | [association](${act.hashscanUrl}) |\n| After | SUCCESS; 100 smallest units delivered | [identical transfer](${after.hashscanUrl}) |`;
 const content = `# Fresh testnet evidence
 
 Signed native run completed **${native.finishedAt}**. ${evm ? `EVM run completed **${evm.finishedAt}**.` : "**Fresh EVM execution remains unverified.** The first submission was rejected by the relay for an insufficient gas price. The fee-selection fix has local tests, but has not been rerun on chain. Funding and refund work is stopped at the owner's request."} Public read snapshots completed **${reads.finishedAt}**.
-All timestamps are UTC. These are new executions through the current adapters,
-not new labels on the earlier September 19–20 transactions.
+All timestamps are UTC. These are new executions through the current adapters.
 
 | Layer | What is proved | Machine-readable record |
 | --- | --- | --- |
@@ -93,7 +98,7 @@ are intentional negative tests; an unexpected success fails the evidence run.
 Fixture setup is labelled separately from adapter execution. Child batch rows have
 a parent consensus timestamp matching their outer batch.
 
-| Operation | Consensus result | Consensus timestamp | Proof |
+| Operation | Consensus result | Consensus time (UTC · raw) | Proof |
 | --- | --- | --- | --- |
 ${rows([...native.transactions].sort((a, b) => a.consensusTimestamp.localeCompare(b.consensusTimestamp)))}
 
@@ -120,13 +125,13 @@ Each purchase spends **0.01 test HBAR**. Quotes are requested immediately before
 submission. The proof includes successful EVM receipts, the HTS SUCCESS response
 code, indexed association, and received units meeting the integer slippage floor.
 
-| Operation | Consensus result | Consensus timestamp | Proof |
+| Operation | Consensus result | Consensus time (UTC · raw) | Proof |
 | --- | --- | --- | --- |
 ${rows(evm.transactions)}
 
 See the EVM report's assertions for exact quoted, minimum, and received units.
 Token amounts are kept in smallest units plus their actual metadata decimals.`
-    : `No fresh successful signed EVM transaction is claimed. The relay rejected the first association before submission: ethers selected 218 weibar against a reported minimum of 1,140,000,000,000 weibar. The runner now requests eth_gasPrice and explicitly applies legacy pricing with 10% headroom. Local tests cover the fee selection and safe error reporting. Historical September swap proofs remain in Git history; they do not validate this refreshed builder implementation.`
+    : `No fresh successful signed EVM transaction is claimed. The relay rejected the first association before submission: ethers selected 218 weibar against a reported minimum of 1,140,000,000,000 weibar. The runner now requests eth_gasPrice and explicitly applies legacy pricing with 10% headroom. Local tests cover the fee selection and safe error reporting. Earlier swap proofs remain in Git history; they do not validate this refreshed builder implementation.`
 }
 
 ## Fresh public read snapshots

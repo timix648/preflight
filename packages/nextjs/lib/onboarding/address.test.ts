@@ -4,8 +4,8 @@
  * test called "long_zero_is_never_ecrecover_compatible" states the invariant
  * that keeps a user's valid signature from being rejected.
  *
- * Every hex value below was read from the live testnet mirror node on
- * 18 September 2026 — see .harness/prds/fixtures.md. Hand-invented
+ * Every hex value below was read from the live testnet mirror node —
+ * see .harness/prds/fixtures.md. Hand-invented
  * "long-zero-looking" strings would not prove the classifier works on a real
  * one.
  */

@@ -1,8 +1,7 @@
 # Fresh testnet evidence
 
 Signed native run completed **2026-09-26T18:27:10.965Z**. EVM run completed **2026-09-26T18:28:07.031Z**. Public read snapshots completed **2026-09-26T17:39:09.947Z**.
-All timestamps are UTC. These are new executions through the current adapters,
-not new labels on the earlier September 19–20 transactions.
+All timestamps are UTC. These are new executions through the current adapters.
 
 | Layer | What is proved | Machine-readable record |
 | --- | --- | --- |
@@ -10,15 +9,10 @@ not new labels on the earlier September 19–20 transactions.
 | Shared EVM builders | Verified HTS association and SAUCE/CLXY acquisition | [EVM](evidence/latest-evm.json) |
 | Read adapters | Mirror account/key/slot reads, independent balances, live Hashio limits, SaucerSwap metadata/router quotes, and deployed probe calls | [reads](evidence/latest-reads.json) |
 
-The completed runs below used the local encrypted deployer account
-`0.0.10505627`; the runner signed its fixtures in memory. The browser-funded
-temporary signer was used in an earlier attempt, not these latest reports.
-This proves SDK/EVM payload execution, not a manual browser-wallet
+The wallet funds a temporary testnet signer; the runner signs its fixtures in
+memory. This proves SDK/EVM payload execution, not a manual browser-wallet
 journey. The actual AcquireFlow component has a separate browser regression suite
 with mocked wallet/API boundaries. Those are different kinds of evidence.
-The separate [recorded demo](https://youtu.be/UQkpHRn6z2U) and
-[live app](https://preflight-peach-theta.vercel.app) show the presentation layer;
-the machine-readable reports below establish the scripted transaction results.
 
 ## The pair that matters
 
@@ -44,32 +38,32 @@ are intentional negative tests; an unexpected success fails the evidence run.
 Fixture setup is labelled separately from adapter execution. Child batch rows have
 a parent consensus timestamp matching their outer batch.
 
-| Operation | Consensus result | Consensus timestamp | Proof |
+| Operation | Consensus result | Consensus time (UTC · raw) | Proof |
 | --- | --- | --- | --- |
-| Create isolated two-decimal evidence token | `SUCCESS` | `1790447085.887336104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447078-248898010) |
-| Create explicit association fixture | `SUCCESS` | `1790447089.873776104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447080-653841971) |
-| Before: unassociated transfer | `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT` | `1790447094.132954104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447088-574838127) |
-| Native adapter: explicit association | `SUCCESS` | `1790447098.210820961` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733127-1790447088-916920985) |
-| After: identical transfer | `SUCCESS` | `1790447102.869653104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447093-654666509) |
-| Create existing finite auto-slot fixture | `SUCCESS` | `1790447110.009716500` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447101-852457372) |
-| Existing auto-slot: delivery | `SUCCESS` | `1790447115.853151104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447107-336985533) |
-| Create raise auto-slot limit fixture | `SUCCESS` | `1790447124.769526076` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447119-764858076) |
-| Native adapter: raise automatic slots | `SUCCESS` | `1790447128.873901104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733134-1790447123-085620102) |
-| Raised auto-slot: delivery | `SUCCESS` | `1790447133.013155104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447126-927597473) |
-| Create pending airdrop and claim fixture | `SUCCESS` | `1790447143.330605146` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447135-353430353) |
-| Native adapter: pending airdrop | `SUCCESS` | `1790447147.470818326` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447139-269416862) |
-| Native adapter: claim pending airdrop | `SUCCESS` | `1790447155.755168805` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733137-1790447148-093598927) |
-| Native adapter: reject held token | `SUCCESS` | `1790447159.353706590` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733137-1790447150-805900228) |
-| Create pending airdrop cancellation fixture | `SUCCESS` | `1790447168.590718207` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447162-399807790) |
-| Native adapter: airdrop before cancellation | `SUCCESS` | `1790447172.313563084` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447166-847257919) |
-| Native adapter: cancel pending airdrop | `SUCCESS` | `1790447177.269768104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447168-086462777) |
-| Native adapter: immediate airdrop delivery | `SUCCESS` | `1790447183.989799104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447178-596065327) |
-| Create atomic batch fixture | `SUCCESS` | `1790447193.373034104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447184-199414324) |
-| Native adapter: atomic batch | `SUCCESS` | `1790447199.315253412` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733151-1790447192-578612312) |
-| Batch child: TokenAssociateTransaction | `SUCCESS` | `1790447199.315253413` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733151-1790447190-794626299) |
-| Batch child: TransferTransaction | `SUCCESS` | `1790447199.315253414` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733151-1790447192-328714931) |
-| Create atomic rollback fixture | `SUCCESS` | `1790447218.753094104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447210-884878355) |
-| Native adapter: intentionally failing atomic batch | `INNER_TRANSACTION_FAILED` | `1790447224.932954104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733156-1790447218-045879143) |
+| Create isolated two-decimal evidence token | `SUCCESS` | 2026-09-26 18:24:45 UTC · `1790447085.887336104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447078-248898010) |
+| Create explicit association fixture | `SUCCESS` | 2026-09-26 18:24:49 UTC · `1790447089.873776104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447080-653841971) |
+| Before: unassociated transfer | `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT` | 2026-09-26 18:24:54 UTC · `1790447094.132954104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447088-574838127) |
+| Native adapter: explicit association | `SUCCESS` | 2026-09-26 18:24:58 UTC · `1790447098.210820961` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733127-1790447088-916920985) |
+| After: identical transfer | `SUCCESS` | 2026-09-26 18:25:02 UTC · `1790447102.869653104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447093-654666509) |
+| Create existing finite auto-slot fixture | `SUCCESS` | 2026-09-26 18:25:10 UTC · `1790447110.009716500` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447101-852457372) |
+| Existing auto-slot: delivery | `SUCCESS` | 2026-09-26 18:25:15 UTC · `1790447115.853151104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447107-336985533) |
+| Create raise auto-slot limit fixture | `SUCCESS` | 2026-09-26 18:25:24 UTC · `1790447124.769526076` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447119-764858076) |
+| Native adapter: raise automatic slots | `SUCCESS` | 2026-09-26 18:25:28 UTC · `1790447128.873901104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733134-1790447123-085620102) |
+| Raised auto-slot: delivery | `SUCCESS` | 2026-09-26 18:25:33 UTC · `1790447133.013155104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447126-927597473) |
+| Create pending airdrop and claim fixture | `SUCCESS` | 2026-09-26 18:25:43 UTC · `1790447143.330605146` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447135-353430353) |
+| Native adapter: pending airdrop | `SUCCESS` | 2026-09-26 18:25:47 UTC · `1790447147.470818326` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447139-269416862) |
+| Native adapter: claim pending airdrop | `SUCCESS` | 2026-09-26 18:25:55 UTC · `1790447155.755168805` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733137-1790447148-093598927) |
+| Native adapter: reject held token | `SUCCESS` | 2026-09-26 18:25:59 UTC · `1790447159.353706590` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733137-1790447150-805900228) |
+| Create pending airdrop cancellation fixture | `SUCCESS` | 2026-09-26 18:26:08 UTC · `1790447168.590718207` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447162-399807790) |
+| Native adapter: airdrop before cancellation | `SUCCESS` | 2026-09-26 18:26:12 UTC · `1790447172.313563084` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447166-847257919) |
+| Native adapter: cancel pending airdrop | `SUCCESS` | 2026-09-26 18:26:17 UTC · `1790447177.269768104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447168-086462777) |
+| Native adapter: immediate airdrop delivery | `SUCCESS` | 2026-09-26 18:26:23 UTC · `1790447183.989799104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447178-596065327) |
+| Create atomic batch fixture | `SUCCESS` | 2026-09-26 18:26:33 UTC · `1790447193.373034104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447184-199414324) |
+| Native adapter: atomic batch | `SUCCESS` | 2026-09-26 18:26:39 UTC · `1790447199.315253412` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733151-1790447192-578612312) |
+| Batch child: TokenAssociateTransaction | `SUCCESS` | 2026-09-26 18:26:39 UTC · `1790447199.315253413` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733151-1790447190-794626299) |
+| Batch child: TransferTransaction | `SUCCESS` | 2026-09-26 18:26:39 UTC · `1790447199.315253414` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733151-1790447192-328714931) |
+| Create atomic rollback fixture | `SUCCESS` | 2026-09-26 18:26:58 UTC · `1790447218.753094104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10505627-1790447210-884878355) |
+| Native adapter: intentionally failing atomic batch | `INNER_TRANSACTION_FAILED` | 2026-09-26 18:27:04 UTC · `1790447224.932954104` | [transaction](https://hashscan.io/testnet/transaction/0.0.10733156-1790447218-045879143) |
 
 ### Semantics the tests check
 
@@ -92,12 +86,12 @@ Each purchase spends **0.01 test HBAR**. Quotes are requested immediately before
 submission. The proof includes successful EVM receipts, the HTS SUCCESS response
 code, indexed association, and received units meeting the integer slippage floor.
 
-| Operation | Consensus result | Consensus timestamp | Proof |
+| Operation | Consensus result | Consensus time (UTC · raw) | Proof |
 | --- | --- | --- | --- |
-| EVM adapter: SAUCE association | `SUCCESS` | `1790447244.853110104` | [transaction](https://hashscan.io/testnet/transaction/0x0a64fd0c793b6ebf533a195126d3aa3876ff93f39a056e770c608aacb3f94009) |
-| EVM adapter: SAUCE acquisition | `SUCCESS` | `1790447256.375167152` | [transaction](https://hashscan.io/testnet/transaction/0x19e17a043d6580cc03bdef4059b96d850b827bbf5962554acdb1736810b5b15a) |
-| EVM adapter: CLXY association | `SUCCESS` | `1790447269.069771104` | [transaction](https://hashscan.io/testnet/transaction/0xd4b4a29ab937b613925de1dbb9d5784db6860c0cb9f140fcad19fe8bfe79d0a0) |
-| EVM adapter: CLXY acquisition | `SUCCESS` | `1790447282.535384928` | [transaction](https://hashscan.io/testnet/transaction/0xa4abd667824b3c62d94750fcc10b1d0ea73569c164e79377c1ce7005c5085c6f) |
+| EVM adapter: SAUCE association | `SUCCESS` | 2026-09-26 18:27:24 UTC · `1790447244.853110104` | [transaction](https://hashscan.io/testnet/transaction/0x0a64fd0c793b6ebf533a195126d3aa3876ff93f39a056e770c608aacb3f94009) |
+| EVM adapter: SAUCE acquisition | `SUCCESS` | 2026-09-26 18:27:36 UTC · `1790447256.375167152` | [transaction](https://hashscan.io/testnet/transaction/0x19e17a043d6580cc03bdef4059b96d850b827bbf5962554acdb1736810b5b15a) |
+| EVM adapter: CLXY association | `SUCCESS` | 2026-09-26 18:27:49 UTC · `1790447269.069771104` | [transaction](https://hashscan.io/testnet/transaction/0xd4b4a29ab937b613925de1dbb9d5784db6860c0cb9f140fcad19fe8bfe79d0a0) |
+| EVM adapter: CLXY acquisition | `SUCCESS` | 2026-09-26 18:28:02 UTC · `1790447282.535384928` | [transaction](https://hashscan.io/testnet/transaction/0xa4abd667824b3c62d94750fcc10b1d0ea73569c164e79377c1ce7005c5085c6f) |
 
 See the EVM report's assertions for exact quoted, minimum, and received units.
 Token amounts are kept in smallest units plus their actual metadata decimals.
@@ -139,26 +133,21 @@ Use `yarn hardhat:evidence:render --native-only` to publish completed native/rea
 proofs with the EVM gap stated explicitly. Neither render command sends transactions.
 
 Every report contains the source commit and core-file SHA-256 hashes. Original
-runs may be retained locally under gitignored `evidence/runs/`; that history is
-not included in a fresh clone. The three committed `latest-*.json` files are the
-public evidence, and incomplete runs never replace a latest successful report.
-Public transaction IDs and consensus results can be independently
+runs are retained under `evidence/runs/`; incomplete runs never replace a latest
+successful report. Public transaction IDs and consensus results can be independently
 checked via HashScan or the testnet mirror API. Client transaction-ID timestamps
 are not consensus timestamps; chronology above uses the latter.
 
 ## Funding and remaining validation
 
-The native report records recovery of unused fixture funding. Transaction fees
-and EVM purchases consume test HBAR; the reports should be read for their own run,
-without mixing in balances or refunds from earlier temporary-signer attempts.
-No further funding or refund is needed to inspect this evidence.
-
-Earlier development attempts encountered failed cleanup and a relay fee rejection.
-Those failures motivated encrypted recovery and explicit EVM fee selection. They
-are distinct from the completed September 26 runs shown above; local run history
-is not a downloadable audit attachment in this repository.
+The native report lists fixture funding recovery and the return of unused HBAR.
+A small reserve is left in each fixture; transaction fees are consumed.
+Any cleanup error is recorded explicitly.
+The completed refund returned 15.11924709 test HBAR; no further funding or refund
+work is in progress. The earlier memory-only attempt left 39.99871842 test HBAR
+in an inaccessible signer after cleanup failed. See the retained
+[incident audit](evidence/runs/2026-09-26T09-13-26-977Z-native.json).
 
 This evidence does not certify mainnet operation, audit token-specific restrictions,
 or replace a clean-machine scaffold installation or a fresh full harness gate.
-It does not claim CLPR integration. A demo recording and scripted proof do not
-replace a clean-machine scaffold test or an independent production audit.
+It does not claim CLPR integration or a new manual browser-wallet demo.

@@ -164,7 +164,7 @@ from an older run.
 | EVM acquisition | HTS association and two 0.01-HBAR swaps through the AcquireFlow payload builders |
 | Public integrations | New account/key/slot/balance snapshots, Hashio config, SaucerSwap metadata/quotes, and deployed probe calls |
 
-The completed EVM run used the local encrypted deployer account. It does
+The EVM runner uses a local test signer funded from a browser wallet. It does
 not claim that a human clicked every AcquireFlow step. Browser regressions exercise
 the actual component separately, with wallet/API boundaries mocked.
 
@@ -248,15 +248,16 @@ check is a separate submission check. [Harness details](docs/DEVELOPER_GUIDE.md#
 
 | Review target | Source |
 | --- | --- |
-| Before/after, native batch rollback, EVM acquisitions and limits | [EVIDENCE.md](EVIDENCE.md) |
-| Native results | [latest-native.json](evidence/latest-native.json) |
-| EVM results | [latest-evm.json](evidence/latest-evm.json) |
-| Public read results | [latest-reads.json](evidence/latest-reads.json) |
-| CI | [Quality workflow](https://github.com/timix648/preflight/actions/workflows/ci.yaml) |
+| Latest evidence and its limits | [EVIDENCE.md](EVIDENCE.md) |
+| Native adapter transactions and exact assertions | [latest-native.json](evidence/latest-native.json) |
+| EVM execution status | [latest-evm.json](evidence/latest-evm.json) |
+| Fresh public network snapshots | [latest-reads.json](evidence/latest-reads.json) |
+| Original runs, including incomplete runs | [evidence/runs](evidence/runs/) |
+| Historical failures and explanations | [NOTES-failures.md](NOTES-failures.md) |
+| Automated checks on main | [Quality workflow](https://github.com/timix648/preflight/actions/workflows/ci.yaml) |
 
-Run history under `evidence/runs/` is gitignored and is not shipped with a fresh
-clone. The three latest reports are the committed evidence. CLPR is optional future
-integration context; it is not implemented or required for this template.
+Start with the before/after transfer, then the failed batch rollback. These show
+the original failure, the onboarding fix, and atomicity. The EVM assertions also verify actual DEX delivery.
 
 ## 19. Licence and credits
 

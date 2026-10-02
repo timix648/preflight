@@ -102,8 +102,8 @@ the ordering is enforced rather than suggested.
 
 ### Choosing the router: check the endpoint, not the blog post
 
-A deployment survey on **19 September 2026** compared these testnet endpoints.
-The ages below are historical observations from that survey, not live counters:
+An earlier deployment survey compared these testnet endpoints. The ages below
+are historical observations from that survey, not live counters:
 
 | Contract        | Hedera id     | Last on-chain call         |
 | --------------- | ------------- | -------------------------- |
@@ -117,7 +117,7 @@ read evidence. The historical survey does not establish today's V2 activity.
 
 ### Quote from the router, never from the price feed
 
-Historical measurement on 19 September 2026 for HBAR → SAUCE:
+An earlier measurement for HBAR → SAUCE:
 
 ```
 published price feed implied   $0.00143646 per SAUCE

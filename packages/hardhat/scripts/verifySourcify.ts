@@ -21,7 +21,7 @@
  * route is gone. Upgrading the plugin means moving to Hardhat 3, which is a
  * much larger change than this file.
  *
- * Verified working against chain 296 on 19 September 2026.
+ * Verified working against chain 296.
  * See NOTES-failures.md #17.
  * ---------------------------------------------------------------------------
  *

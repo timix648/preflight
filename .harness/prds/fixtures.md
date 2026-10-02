@@ -15,8 +15,7 @@ key type:                         ED25519
 max_automatic_token_associations: 0
 ```
 
-Verified against `https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.2`
-on 18 September 2026.
+Verified against `https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.2`.
 
 This one account exercises four traps at once, and it is permanent — no need to
 create and fund anything:
@@ -56,16 +55,16 @@ these accounts; only the integration suite reads them live, and it uses `0.0.2`.
 
 ## Endpoints
 
-| Endpoint | Status 18 Sep 2026 | Notes |
+| Endpoint | Status 2 Oct 2026 | Notes |
 | --- | --- | --- |
 | `testnet.mirrornode.hedera.com` | HTTP 200 | |
-| `testnet.hashio.io/api` | `relay/0.78.5` | chain id 296 |
-| `test-api.saucerswap.finance/stats` | HTTP 200 | 964,735 swaps, $787,719 TVL — live and growing |
+| `testnet.hashio.io/api` | `relay/0.79.0` | chain id 296 |
+| `test-api.saucerswap.finance/stats` | HTTP 200 | 1,002,126 swaps, $1,014,701 TVL — live and growing |
 | `test-api.saucerswap.finance/tokens` | HTTP 200 | real token metadata with per-token `decimals` |
 
 ## Relay limits — read live, do not hardcode
 
-`relay.ts` must fetch these from `/config`. Values observed 18 Sep 2026:
+`relay.ts` must fetch these from `/config`. Values observed 2 October 2026:
 
 ```
 PAYMASTER_ENABLED               false     <- no gasless path exists

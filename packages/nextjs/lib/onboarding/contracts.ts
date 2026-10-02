@@ -16,7 +16,7 @@
  * ---------------------------------------------------------------------------
  *
  * EVERY ADDRESS BELOW WAS VERIFIED AGAINST THE LIVE MIRROR NODE, not merely
- * copied from the documentation. Checked 19 September 2026:
+ * copied from the documentation. Checked against the live mirror node:
  *
  *   contract                 hedera id      last on-chain call
  *   V1 RouterV3              0.0.19264      8 hours ago     <- chosen

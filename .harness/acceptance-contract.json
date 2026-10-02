@@ -4,7 +4,7 @@
   "notes": [
     "Only C9 is executableWithTestSigner. Every such assertion spends real testnet HBAR and adds minutes to the run, so the on-chain journey is proven once, end to end, rather than in pieces.",
     "The credential-free assertions are first and weighted critical on purpose: a stranger with no wallet, no key and no .env must see true live data. That is the claim most templates cannot make, and the one that fails most quietly if it regresses.",
-    "Values quoted below (account ids, token ids, decimals) are live testnet facts verified on 20 September 2026. An assertion that fails because the CHAIN changed is not the same as one that fails because the APP changed — say which in the evidence."
+    "Values quoted below (account ids, token ids, decimals) are live testnet facts verified against the chain. An assertion that fails because the CHAIN changed is not the same as one that fails because the APP changed — say which in the evidence."
   ],
   "assertions": [
     {

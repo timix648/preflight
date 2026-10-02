@@ -161,7 +161,7 @@ Foundation's renamed Hedera SDK and is what scaffold-hbar ships. Most models
 emit `@hashgraph/sdk` from memory; installing it here adds a second, conflicting
 SDK to the tree. Do not add it.
 
-Verified 18 September 2026 against the installed package — every class all four
+Verified against the installed package — every class all four
 association paths need is present and callable:
 
 `TokenAssociateTransaction`, `AccountUpdateTransaction`,

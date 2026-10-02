@@ -85,7 +85,7 @@ explicitly forbidden.`
 **Cause.** Yarn enables `--immutable` automatically when `CI` is set, and the
 scaffolded `yarn.lock` does not match its own `package.json`.
 
-**Fix.** RESOLVED 18 Sep 2026. The regenerated lockfile is committed (54 stale
+**Fix.** RESOLVED. The regenerated lockfile is committed (54 stale
 lines removed). `CI=1 yarn install` now completes with exit 0, so the harness
 recipe runs a plain `yarn install` with no workaround flag.
 

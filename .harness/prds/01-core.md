@@ -30,7 +30,7 @@ hooks. It must run from a route handler, a script, or a plain test.
    accepts or `TokenRejectTransaction` declines.
 4. **Batch** — HIP-551 atomic associate + transfer, one approval.
 
-### SDK support — VERIFIED 18 September 2026
+### SDK support — VERIFIED against the installed package
 
 The SDK is **`@hiero-ledger/sdk` ^2.80.0**, not `@hashgraph/sdk`. Hiero is the
 Linux Foundation's renamed Hedera SDK and is what scaffold-hbar ships. Use the
